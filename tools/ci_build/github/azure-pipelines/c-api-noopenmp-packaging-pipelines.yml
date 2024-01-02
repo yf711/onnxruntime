@@ -74,6 +74,7 @@ resources:
     type: github
     endpoint: ort-examples
     name: microsoft/onnxruntime-inference-examples
+    ref: zhanyi/modelurl
   - repository: manylinux
     type: Github
     endpoint: Microsoft
@@ -617,7 +618,7 @@ stages:
 
     steps:
     - checkout: self                           # due to checkout multiple repos, the root directory is $(Build.SourcesDirectory)/onnxruntime
-    - checkout: onnxruntime-inference-examples/heads/zhanyi/modelurl # due to checkout multiple repos, the root directory is $(Build.SourcesDirectory)/onnxruntime-inference-examples
+    - checkout: onnxruntime-inference-examples # due to checkout multiple repos, the root directory is $(Build.SourcesDirectory)/onnxruntime-inference-examples
       submodules: false
     - script: dir $(Build.SourcesDirectory)
     - task: BatchScript@1
