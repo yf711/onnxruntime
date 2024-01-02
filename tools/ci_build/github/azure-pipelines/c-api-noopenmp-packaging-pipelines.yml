@@ -689,7 +689,7 @@ stages:
         arguments: $(Build.SourcesDirectory)\onnxruntime $(Build.ArtifactStagingDirectory)\onnxruntime-win-x64-gpu-$(OnnxRuntimeVersion).zip $(Build.SourcesDirectory)\onnxruntime-inference-examples\c_cxx\squeezenet
         workingFolder: '$(Build.ArtifactStagingDirectory)'
       env:
-        ONNX_MODEL_URL: "C:\local\models\zoo\opset8\SqueezeNet 1.0\model.onnx"
+        ONNX_MODEL_URL: '"C:\local\models\zoo\opset8\SqueezeNet 1.0\model.onnx"'
 
     - task: PublishPipelineArtifact@0
       displayName: 'Publish Pipeline Combined GPU Package Artifact'
