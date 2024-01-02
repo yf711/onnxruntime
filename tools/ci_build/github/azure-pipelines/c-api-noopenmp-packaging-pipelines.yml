@@ -617,7 +617,7 @@ stages:
 
     steps:
     - checkout: self                           # due to checkout multiple repos, the root directory is $(Build.SourcesDirectory)/onnxruntime
-    - checkout: onnxruntime-inference-examples # due to checkout multiple repos, the root directory is $(Build.SourcesDirectory)/onnxruntime-inference-examples
+    - checkout: onnxruntime-inference-examples/heads/zhanyi/modelurl # due to checkout multiple repos, the root directory is $(Build.SourcesDirectory)/onnxruntime-inference-examples
       submodules: false
     - script: dir $(Build.SourcesDirectory)
     - task: BatchScript@1
@@ -630,11 +630,14 @@ stages:
       parameters:
         versionFileDirectory: '$(Build.SourcesDirectory)\onnxruntime'
         workingDirectory: '$(Build.SourcesDirectory)\onnxruntime'
-    - task: DownloadPipelineArtifact@2
-      displayName: 'Download Pipeline Artifact - Combined GPU'
-      inputs:
-        artifactName: 'onnxruntime-win-x64-cuda'
-        targetPath: '$(Build.BinariesDirectory)/zip-artifacts'
+
+    - template: templates/flex-downloadPipelineArtifact.yml
+      parameters:
+        StepName: 'Download Pipeline Artifact - Combined GPU'
+        ArtifactName: 'onnxruntime-win-x64-cuda'
+        TargetPath: '$(Build.BinariesDirectory)/zip-artifacts'
+        SpecificArtifact: ${{ parameters.SpecificArtifact }}
+        BuildId: ${{ parameters.BuildId }}
 
     - task: DownloadPipelineArtifact@2
       displayName: 'Download Pipeline Artifact - Combined GPU'
@@ -682,6 +685,8 @@ stages:
         filename: $(Build.SourcesDirectory)\onnxruntime-inference-examples\c_cxx\squeezenet\run_capi_application.bat
         arguments: $(Build.SourcesDirectory)\onnxruntime $(Build.ArtifactStagingDirectory)\onnxruntime-win-x64-gpu-$(OnnxRuntimeVersion).zip $(Build.SourcesDirectory)\onnxruntime-inference-examples\c_cxx\squeezenet
         workingFolder: '$(Build.ArtifactStagingDirectory)'
+      env:
+        ONNX_MODEL_URL: 'C:\local\models\zoo\opset8\SqueezeNet 1.0\model.onnx'
 
     - task: PublishPipelineArtifact@0
       displayName: 'Publish Pipeline Combined GPU Package Artifact'
