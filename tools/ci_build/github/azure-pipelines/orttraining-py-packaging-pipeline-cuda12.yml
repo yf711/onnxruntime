@@ -11,8 +11,8 @@ resources:
 stages:
 - template: templates/py-packaging-training-cuda-stage.yml
   parameters:
-    # set the parallel to 16 to increate the memory/cores to avoid OOM
-    build_py_parameters: --enable_training --update --build --parallel 16
+    # set the parallel to increate the memory/cores to avoid OOM
+    build_py_parameters: --enable_training --update --build --parallel 8
     torch_version: '2.1.0'
     opset_version: '17'
     cuda_version: '12.2'
