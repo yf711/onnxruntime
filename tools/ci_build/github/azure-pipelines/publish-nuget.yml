@@ -5,8 +5,8 @@ resources:
     trigger:
       branches:
         include:
-        - main
-    branch: main
+        - zhanyi/revert1
+    branch: zhanyi/revert1
 
 stages:
 - stage: Publish_NuGet_Package_And_Report
@@ -26,11 +26,11 @@ stages:
 
     - script: mkdir "$(Build.BinariesDirectory)\nuget-artifact\final-package"
 
-    #- download: build
-    #  displayName: 'Download Pipeline Artifact - Signed NuGet Package'
-    #  artifact: 'drop-signed-nuget-CPU'
+    - download: build
+      displayName: 'Download Pipeline Artifact - Signed NuGet Package'
+      artifact: 'drop-signed-nuget-CPU'
 
-    #- script: move "$(Pipeline.Workspace)\build\drop-signed-nuget-CPU\*" "$(Build.BinariesDirectory)\nuget-artifact\final-package"
+    - script: move "$(Pipeline.Workspace)\build\drop-signed-nuget-CPU\*" "$(Build.BinariesDirectory)\nuget-artifact\final-package"
 
     - template: nuget/templates/get-nuget-package-version-as-variable.yml
       parameters:
