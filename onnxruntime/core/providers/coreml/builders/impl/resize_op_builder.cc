@@ -61,6 +61,11 @@ bool GetValidatedResizeScales(const GraphViewer& graph_viewer, const Node& node,
 
   int64_t input_rank = input_shape.size();
 
+  if (input_shape[input_rank - 2] == -1 || input_shape[input_rank - 1] == -1) {
+    LOGS(logger, VERBOSE) << "Resize with 'scales' requires the H and W dimensions to have fixed values";
+    return false;
+  }
+
   const auto* scales_tensor = graph_viewer.GetConstantInitializer(input_defs[2]->Name());
   if (!scales_tensor) {
     LOGS(logger, VERBOSE) << "Resize 'scales' input must be a constant initializer";
@@ -191,27 +196,12 @@ Status ResizeOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const
     std::string coord_trans_mode = helper.Get("coordinate_transformation_mode", "half_pixel");
 
     if (using_scales) {
-      // upsample operators
-
-      // if the output shape has concrete values for H and W we don't need to add the scale factor values.
-      // this should be slightly safer as there's no potential differences in rounding the result from applying
-      // a floating point scaling factor.
-      bool add_scaling_values = true;
-      std::vector<int64_t> output_shape;
-      if (GetShape(*output_defs[0], output_shape, logger) &&
-          output_shape[input_rank - 2] != -1 &&  // rank of input and output is always the same
-          output_shape[input_rank - 1] != -1) {
-        add_scaling_values = false;
-      }
-
-      if (add_scaling_values) {
-        float scale_height = output_scales[num_scales - 2];
-        float scale_width = output_scales[num_scales - 1];
-        AddOperationInput(*op, "scale_factor_height",
-                          model_builder.AddScalarConstant(coreml_op_type, "scale_factor_height", scale_height));
-        AddOperationInput(*op, "scale_factor_width",
-                          model_builder.AddScalarConstant(coreml_op_type, "scale_factor_width", scale_width));
-      }
+      float scale_height = output_scales[num_scales - 2];
+      float scale_width = output_scales[num_scales - 1];
+      AddOperationInput(*op, "scale_factor_height",
+                        model_builder.AddScalarConstant(coreml_op_type, "scale_factor_height", scale_height));
+      AddOperationInput(*op, "scale_factor_width",
+                        model_builder.AddScalarConstant(coreml_op_type, "scale_factor_width", scale_width));
 
       if (is_linear) {
         // we only allow these coord modes in the 'is supported' check,
@@ -363,16 +353,17 @@ bool ResizeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInputPa
       return false;
     }
 
-    if (input_params.create_mlprogram) {
-      // no additional requirements
-    } else {
-      // For now we only support upscale, so the scale_h and scale_w should be an integer >= 1
-      // TODO support ResizeBilinear
-      size_t scales_rank = output_scales.size();
-      float scale_h = output_scales[scales_rank - 2];
-      float scale_w = output_scales[scales_rank - 1];
+    size_t num_scales = output_scales.size();
+    float scale_h = output_scales[num_scales - 2];
+    float scale_w = output_scales[num_scales - 1];
 
-      // ONNX spec requires scale to be a positive float, so we are not checking that here
+    // NeuralNetwork supports upscale only with round numbers.
+    //
+    // ML Program results seem to match if round nubers are involved. When downscaling the scaling value should be
+    // 1 / <factor of input size>. e.g. if input size is 2, scaling value should be 0.5. if input size is 8, scaling
+    // factor could be 1/8, 1/4 or 1/2.
+    if (scale_h >= 1.f && scale_w >= 1.f) {
+      // upscale
       if (roundf(scale_h) != scale_h) {
         LOGS(logger, VERBOSE) << "Resize: scale_h: " << scale_h << " is not a whole number";
         return false;
@@ -382,8 +373,38 @@ bool ResizeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInputPa
         LOGS(logger, VERBOSE) << "Resize: scale_w: " << scale_w << " is not a whole number";
         return false;
       }
+    } else if (scale_h <= 1.f && scale_w <= 1.f) {
+      // downscale
+      if (input_params.create_mlprogram) {
+        auto h_in = input_shape[input_rank - 2];
+        auto w_in = input_shape[input_rank - 1];
+        auto h_out = h_in * scale_h;
+        auto w_out = w_in * scale_w;
+
+        if (std::fmodf(float(h_in), h_out) != 0.f) {
+          LOGS(logger, VERBOSE) << "Resize: downsampling output height: " << h_out
+                                << " is not a factor of input height: " << h_in;
+          return false;
+        }
+
+        if (std::fmodf(float(w_in), w_out) != 0.f) {
+          LOGS(logger, VERBOSE) << "Resize: downsampling output width: " << w_out
+                                << " is not a factor of input width: " << w_in;
+          return false;
+        }
+
+      } else {
+        LOGS(logger, VERBOSE) << "Resize downscaling is not supported.";
+        return false;
+      }
+    } else {
+      LOGS(logger, VERBOSE) << "Resize: scale_h: " << scale_h << " and scale_w: " << scale_w
+                            << " must both be >= 1 or <= 1";
+      return false;
     }
   } else {
+    assert(using_sizes);
+
     if (!GetValidatedResizeSizes(input_params.graph_viewer, node, axes, output_sizes, logger)) {
       return false;
     }
