@@ -156,7 +156,7 @@ void ResizeOpBuilder::AddInitializersToSkip(ModelBuilder& model_builder, const N
     model_builder.AddInitializerToSkip(input_defs[3]->Name());  // sizes
 
     if (node.SinceVersion() < 13) {
-      model_builder.AddInputToSkip(input_defs[2]->Name());  // scales
+      model_builder.AddInputToSkip(input_defs[2]->Name());  // skip the unused scales input
     }
   }
 }
