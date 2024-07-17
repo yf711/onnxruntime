@@ -448,7 +448,7 @@ TEST(ResizeOpTest, ResizeOpLinearDownSampleTest_4DBilinear_align_corners) {
   run_test(false);
 
 #if defined(USE_NNAPI) || defined(USE_COREML)
-  // NNAPI will need the scales as an initializer
+  // NNAPI and CoreML need the scales as an initializer
   // Also tensor RT EP will fail if scales is an initializer but will pass if it is not
   run_test(true);
 #endif
@@ -484,7 +484,7 @@ TEST(ResizeOpTest, ResizeOpLinearDownSampleTest_4DBilinear_align_corners_sizes) 
   run_test(false);
 
 #if defined(USE_NNAPI) || defined(USE_COREML)
-  // NNAPI will need the scales as an initializer
+  // NNAPI and CoreML will need the scales as an initializer
   // Also tensor RT EP will fail if scales is an initializer but will pass if it is not
   run_test(true);
 #endif

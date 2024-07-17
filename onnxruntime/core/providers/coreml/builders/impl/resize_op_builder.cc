@@ -185,8 +185,12 @@ Status ResizeOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const
 
     std::string_view coreml_op_type;
     if (using_scales) {
+      // https://apple.github.io/coremltools/source/coremltools.converters.mil.mil.ops.defs.html#coremltools.converters.mil.mil.ops.defs.iOS15.image_resizing.upsample_bilinear
+      // https://apple.github.io/coremltools/source/coremltools.converters.mil.mil.ops.defs.html#coremltools.converters.mil.mil.ops.defs.iOS15.image_resizing.upsample_nearest_neighbor
       coreml_op_type = is_linear ? "upsample_bilinear" : "upsample_nearest_neighbor";
     } else {
+      // https://apple.github.io/coremltools/source/coremltools.converters.mil.mil.ops.defs.html#coremltools.converters.mil.mil.ops.defs.iOS15.image_resizing.resize_bilinear
+      // https://apple.github.io/coremltools/source/coremltools.converters.mil.mil.ops.defs.html#coremltools.converters.mil.mil.ops.defs.iOS15.image_resizing.resize_nearest_neighbor
       coreml_op_type = is_linear ? "resize_bilinear" : "resize_nearest_neighbor";
     }
 
@@ -207,7 +211,6 @@ Status ResizeOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const
         // we only allow these coord modes in the 'is supported' check,
         //   - half_pixel or pytorch_half_pixel with output size > 1 -> align_corners = false
         //   - align_corners -> align_corners = true
-
         bool align_corners = coord_trans_mode == "align_corners";
         AddOperationInput(*op, "align_corners",
                           model_builder.AddScalarConstant(coreml_op_type, "align_corners", align_corners));
@@ -357,13 +360,12 @@ bool ResizeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInputPa
     float scale_h = output_scales[num_scales - 2];
     float scale_w = output_scales[num_scales - 1];
 
-    // NeuralNetwork supports upscale only with round numbers.
+    // NeuralNetwork supports upsample only with round numbers.
     //
-    // ML Program results seem to match if round nubers are involved. When downscaling the scaling value should be
-    // 1 / <factor of input size>. e.g. if input size is 2, scaling value should be 0.5. if input size is 8, scaling
-    // factor could be 1/8, 1/4 or 1/2.
+    // ML Program results seem to match if round numbers are involved. When downsampling the scaling value should be
+    // 1 / <factor of input size>. e.g. if input size is 8, scaling factor could be 1/8, 1/4 or 1/2.
     if (scale_h >= 1.f && scale_w >= 1.f) {
-      // upscale
+      // upsample (or no-op with both == 1.f that we won't bother special-casing)
       if (roundf(scale_h) != scale_h) {
         LOGS(logger, VERBOSE) << "Resize: scale_h: " << scale_h << " is not a whole number";
         return false;
@@ -374,7 +376,7 @@ bool ResizeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInputPa
         return false;
       }
     } else if (scale_h <= 1.f && scale_w <= 1.f) {
-      // downscale
+      // downsample
       if (input_params.create_mlprogram) {
         auto h_in = input_shape[input_rank - 2];
         auto w_in = input_shape[input_rank - 1];
@@ -418,7 +420,7 @@ bool ResizeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInputPa
         return false;
       }
 
-      // For now we only support upscale, so the output_size_h and output_size_w should be an integer >= 1
+      // For now we only support upsample, so the output_size_h and output_size_w should be an integer >= 1
       // TODO support ResizeBilinear
       auto input_size_h = input_shape[input_rank - 2];
       auto input_size_w = input_shape[input_rank - 1];
