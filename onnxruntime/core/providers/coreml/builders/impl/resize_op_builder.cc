@@ -308,6 +308,16 @@ bool ResizeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInputPa
     return false;
   }
 
+  // as we allow empty shapes in the checks done by BaseOpBuilder::HasSupportedInputs we explicitly check for an empty
+  // an empty input here to be consistent.
+  // this should never happen in a real model though as a dim with value 0 (i.e. no input data) would typically be a
+  // dynamic dimension where a previous step had no output (e.g. Loop of zero interations, NonZero with no matches,
+  // NonMaxSupression with no boxes).
+  if (std::find(input_shape.begin(), input_shape.end(), 0) != input_shape.end()) {
+    LOGS(logger, VERBOSE) << "Resize input shape has with dimension values of 0 which is not supported.";
+    return false;
+  }
+
   const auto input_rank = input_shape.size();
   if (input_params.create_mlprogram) {
     if (input_rank < 3 || input_rank > 5) {
