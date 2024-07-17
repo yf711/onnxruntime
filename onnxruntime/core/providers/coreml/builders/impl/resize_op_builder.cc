@@ -20,7 +20,7 @@ namespace coreml {
 
 class ResizeOpBuilder : public BaseOpBuilder {
  public:
-  // allow empty inputs to handle roi and scales potentially being empty inputs that are ignored due to the ONNX spec
+  // allow roi and scales potentially being empty inputs that are ignored during processing
   ResizeOpBuilder() : BaseOpBuilder(/*allow empty inputs*/ true) {}
 
  private:
@@ -172,7 +172,7 @@ Status ResizeOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const
   size_t input_rank = input_shape.size();
 
   // we know we have either a scales or sizes input so this is safe.
-  // check for `sizes` first. this also handle Resize-11 where scales was a required input but sizes were used
+  // check for sizes first. this handles Resize-11 where scales was a required input but sizes were used if provided.
   bool using_sizes = input_defs.size() >= 4 && input_defs[3]->Exists();
   bool using_scales = !using_sizes;
 
@@ -357,7 +357,7 @@ bool ResizeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInputPa
     return false;
   }
 
-  // check for `sizes` first. this handles Resize-11 where scales was a required input but sizes were used if provided.
+  // check for sizes first. this handles Resize-11 where scales was a required input but sizes were used if provided.
   bool using_sizes = input_defs.size() >= 4 && input_defs[3]->Exists();
   bool using_scales = !using_sizes && input_defs.size() >= 3 && input_defs[2]->Exists();
 

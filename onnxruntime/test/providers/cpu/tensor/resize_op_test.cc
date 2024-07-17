@@ -420,7 +420,7 @@ TEST(ResizeOpTest, ResizeOpLinearDownSampleTest_4DBilinear1_WithSizes) {
   run_test(true);
 }
 
-// test handling for opset 11. scales input it provided but should be ignored in favor of sizes
+// test handling for opset 11. scales input is provided but should be ignored in favor of sizes
 TEST(ResizeOpTest, ResizeOpLinearDownSampleTest_4DBilinear1_WithSizesOpset11) {
   OpTester test("Resize", 11);
   std::vector<float> roi{};
