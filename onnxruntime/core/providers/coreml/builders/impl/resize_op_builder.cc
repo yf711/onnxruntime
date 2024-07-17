@@ -428,13 +428,13 @@ bool ResizeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInputPa
         auto h_out = h_in * scale_h;
         auto w_out = w_in * scale_w;
 
-        if (std::fmodf(float(h_in), h_out) != 0.f) {
+        if (std::fmod(float(h_in), h_out) != 0.f) {
           LOGS(logger, VERBOSE) << "Resize: downsampling output height: " << h_out
                                 << " is not a factor of input height: " << h_in;
           return false;
         }
 
-        if (std::fmodf(float(w_in), w_out) != 0.f) {
+        if (std::fmod(float(w_in), w_out) != 0.f) {
           LOGS(logger, VERBOSE) << "Resize: downsampling output width: " << w_out
                                 << " is not a factor of input width: " << w_in;
           return false;
