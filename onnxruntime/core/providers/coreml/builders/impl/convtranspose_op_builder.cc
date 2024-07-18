@@ -121,7 +121,7 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
     return false;
   }
 
-  if (input_defs.size() > 2 && input_params.graph_viewer.GetConstantInitializer(input_defs[2]->Name())) {
+  if (input_defs.size() > 2 && !input_params.graph_viewer.GetConstantInitializer(input_defs[2]->Name())) {
     LOGS(logger, VERBOSE) << not_supported << "bias must be constant";
     return false;
   }
