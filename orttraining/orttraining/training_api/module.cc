@@ -15,6 +15,8 @@
 
 #include "orttraining/training_api/checkpoint.h"
 
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+
 using namespace onnxruntime;
 
 namespace onnxruntime {
@@ -54,7 +56,7 @@ Status RemoveUnusedNodes(Graph& inference_graph, InlinedVector<const NodeArg*>& 
   GraphViewer graph_viewer(inference_graph);
   const auto node_indices = graph_viewer.GetNodesInTopologicalOrder();
   for (size_t idx = node_indices.size(); idx > 0; --idx) {
-    const NodeIndex node_index = idx - 1;
+    const NodeIndex node_index = node_indices[idx - 1];
     auto* node = inference_graph.GetNode(node_index);
     if (!reachable_nodes.count(node)) {
       graph_utils::RemoveNodeOutputEdges(inference_graph, *node);
@@ -658,11 +660,45 @@ Status Module::ExportModelForInferencing(const std::string& inference_model_path
                                          gsl::span<const std::string> graph_output_names) const {
   ORT_RETURN_IF(state_->module_checkpoint_state.is_nominal_state,
                 "Cannot export the model with a nominal state. Please load the model parameters first.");
-  ORT_RETURN_IF(!eval_sess_ || !eval_model_path_.has_value(),
+  ORT_RETURN_IF(!eval_sess_,
                 "Eval model was not provided. Cannot export a model for inferencing.");
 
+  const std::filesystem::path temp_external_file_path = "temporary_proto.onnx.data";
+  const std::filesystem::path temp_model_file_path = "temporary_proto.onnx.data";
+
   ONNX_NAMESPACE::ModelProto eval_model;
-  ORT_THROW_IF_ERROR(Model::Load(ToPathString(eval_model_path_.value()), eval_model));
+  if (!eval_model_path_.has_value()) {
+    // temporary workaround: if no eval model path is provided (ie, eval model was loaded by buffer), then
+    // dump eval model to a file then load that in
+    const SessionState& session_state = eval_sess_->GetSessionState();
+    const GraphViewer& graph_viewer = session_state.GetGraphViewer();
+    const Graph& graph = graph_viewer.GetGraph();
+    const Model& model = graph.GetModel();
+
+    ONNX_NAMESPACE::ModelProto model_proto;
+    if (state_->has_external_data) {
+      model_proto = model.ToGraphProtoWithExternalInitializers(temp_external_file_path, temp_model_file_path, 64);
+    }
+    else {
+      model_proto = model.ToProto();
+    }
+
+    int fd = 0;
+    Status status = Env::Default().FileOpenWr(temp_model_file_path, fd);
+    ORT_RETURN_IF_ERROR(status);
+
+    google::protobuf::io::FileOutputStream output(fd);
+    const bool result = model_proto.SerializeToZeroCopyStream(&output) && output.Flush();
+    ORT_RETURN_IF_NOT(result, "Failed to serialize the graph proto of the eval session to file.");
+
+    ORT_IGNORE_RETURN_VALUE(Env::Default().FileClose(fd));
+
+    ORT_THROW_IF_ERROR(Model::Load(ToPathString(temp_model_file_path), eval_model));
+  }
+  else {
+    ORT_THROW_IF_ERROR(Model::Load(ToPathString(eval_model_path_.value()), eval_model));
+  }
+
 
   // Clone the eval mode into an inference onnxruntime::Model.
   std::shared_ptr<Model> inference_model;
@@ -686,6 +722,14 @@ Status Module::ExportModelForInferencing(const std::string& inference_model_path
         Model::SaveWithExternalInitializers(*inference_model, inference_model_pathstring, external_data_name, 64));
   } else {
     ORT_THROW_IF_ERROR(Model::Save(*inference_model, ToPathString(inference_model_path)));
+  }
+
+  // Delete the temporary files if they exist
+  if (std::filesystem::exists(temp_external_file_path)) {
+    std::filesystem::remove(temp_external_file_path);
+  }
+  if (std::filesystem::exists(temp_model_file_path)) {
+    std::filesystem::remove(temp_model_file_path);
   }
   // Save the model at the desired location.
   return Status::OK();
