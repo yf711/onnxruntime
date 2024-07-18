@@ -678,8 +678,7 @@ Status Module::ExportModelForInferencing(const std::string& inference_model_path
     ONNX_NAMESPACE::ModelProto model_proto;
     if (state_->has_external_data) {
       model_proto = model.ToGraphProtoWithExternalInitializers(temp_external_file_path, temp_model_file_path, 64);
-    }
-    else {
+    } else {
       model_proto = model.ToProto();
     }
 
@@ -694,11 +693,9 @@ Status Module::ExportModelForInferencing(const std::string& inference_model_path
     ORT_IGNORE_RETURN_VALUE(Env::Default().FileClose(fd));
 
     ORT_THROW_IF_ERROR(Model::Load(ToPathString(temp_model_file_path), eval_model));
-  }
-  else {
+  } else {
     ORT_THROW_IF_ERROR(Model::Load(ToPathString(eval_model_path_.value()), eval_model));
   }
-
 
   // Clone the eval mode into an inference onnxruntime::Model.
   std::shared_ptr<Model> inference_model;
