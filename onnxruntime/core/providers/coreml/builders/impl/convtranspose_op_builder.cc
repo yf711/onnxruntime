@@ -31,7 +31,7 @@ class ConvTransposeOpBuilder : public BaseOpBuilder {
 // }
 
 Status ConvTransposeOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const Node& node,
-                                                     const logging::Logger& /*logger*/) const {
+                                                     const logging::Logger& logger) const {
 #if defined(COREML_ENABLE_MLPROGRAM)
   using namespace CoreML::Specification::MILSpec;  // NOLINT
   const auto& input_defs = node.InputDefs();
@@ -55,8 +55,8 @@ Status ConvTransposeOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder
   // we know this input has a valid shape due to the check in IsOpSupportedImpl. ignore N and C dims.
   const auto num_spatial_dims = input_defs[1]->Shape()->dim_size() - 2;
 
-  // Spec says strides and dilations are optional but reality is they're required for at least the iOS15 target (CoreML5).
-  // Due to that we just add everything for simplicity.
+  // Spec says strides/dilations/pads are optional but reality is they're required for at least the iOS15 target
+  // which is CoreML5. Due to that we just add everything for simplicity.
   const auto strides = helper.Get("strides", std::vector<int64_t>(num_spatial_dims, 1));
   const auto dilations = helper.Get("dilations", std::vector<int64_t>(num_spatial_dims, 1));
 
@@ -68,10 +68,17 @@ Status ConvTransposeOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder
     AddOperationInput(*op, "groups", model_builder.AddScalarConstant(op_type, "groups", *groups));
   }
 
-  const auto output_shape = helper.GetInt64s("output_shape");
-  if (output_shape) {
-    AddOperationInput(*op, "output_shape", model_builder.AddConstant(op_type, "output_shape", *output_shape));
-  }
+  // if we can enable output_shape, this code works. see IsOpSupportedImpl for the reason it's disabled.
+  // const auto output_shape = helper.GetInt64s("output_shape");
+  // if (output_shape) {
+  //  AddOperationInput(*op, "output_shape", model_builder.AddConstant(op_type, "output_shape", *output_shape));
+  //  // these are required despite the spec saying
+  //  AddOperationInput(*op, "pad_type", model_builder.AddScalarConstant(op_type, "pad_type", std::string("valid")));
+  //  std::vector<int64_t> pads(num_spatial_dims * 2, 0);
+  //  AddOperationInput(*op, "pad", model_builder.AddConstant(op_type, "pad", pads));
+  //} else {
+  //  AddPadTypeAndPads(*op, model_builder, op_type, helper, num_spatial_dims);
+  //}
 
   AddPadTypeAndPads(*op, model_builder, op_type, helper, num_spatial_dims);
 
@@ -85,10 +92,8 @@ Status ConvTransposeOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder
 
 bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInputParams& input_params,
                                                const logging::Logger& logger) const {
-  const auto not_supported = node.Name() + ":ConvTranspose is not supported: ";
-
   if (!input_params.create_mlprogram) {
-    LOGS(logger, VERBOSE) << not_supported << "requires ML Program";
+    LOGS(logger, VERBOSE) << "ConvTranspose: ML Program required";
     return false;
   }
 
@@ -108,7 +113,7 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
   std::vector<int64_t> input_shape;
   if (!GetShape(*input_defs[0], input_shape, logger)) {
     // requires the rank at least to be known
-    LOGS(logger, VERBOSE) << not_supported << "failed to get input shape";
+    LOGS(logger, VERBOSE) << "ConvTranspose: failed to get input shape";
     return false;
   }
 
@@ -117,19 +122,19 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
   const auto& weight_name = input_defs[1]->Name();
   const auto* weight = input_params.graph_viewer.GetConstantInitializer(weight_name);
   if (!weight) {
-    LOGS(logger, VERBOSE) << not_supported << "weight must be constant";
+    LOGS(logger, VERBOSE) << "ConvTranspose: weight must be constant";
     return false;
   }
 
   if (input_defs.size() > 2 && !input_params.graph_viewer.GetConstantInitializer(input_defs[2]->Name())) {
-    LOGS(logger, VERBOSE) << not_supported << "bias must be constant";
+    LOGS(logger, VERBOSE) << "ConvTranspose: bias must be constant";
     return false;
   }
 
   std::vector<int64_t> weight_shape;
   if (!GetShape(weight_arg, weight_shape, logger)) {
     // impossible as it's a constant initializer
-    LOGS(logger, VERBOSE) << not_supported << "failed to get weight shape";
+    LOGS(logger, VERBOSE) << "ConvTranspose: failed to get weight shape";
     return false;
   }
 
@@ -145,7 +150,7 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
   // Can add this handling if/when needed.
   auto autopad = StringToAutoPadType(helper.Get("auto_pad", "NOTSET"));
   if (autopad == AutoPadType::SAME_LOWER || autopad == AutoPadType::SAME_UPPER) {
-    LOGS(logger, VERBOSE) << not_supported << "support for SAME_LOWER/SAME_UPPER is not implemented yet";
+    LOGS(logger, VERBOSE) << "ConvTranspose: support for SAME_LOWER/SAME_UPPER is not implemented yet";
     return false;
   }
 
@@ -168,16 +173,25 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
     }
 
     if (!valid) {
-      LOGS(logger, VERBOSE) << not_supported << "kernel_shape attribute does not match the weight shape";
+      LOGS(logger, VERBOSE) << "ConvTranspose: kernel_shape attribute does not match the weight shape";
       return false;
     }
+  }
+
+  // In theory this can be supported, but running with COREML_FLAG_USE_CPU_ONLY produces output that doesn't match
+  // ONNX. Running without that flag produces the expected output. Madness....
+  auto output_shape = helper.GetInt64s("output_shape");
+  if (output_shape) {
+    // there is an output_shape input, but the padding seems to be different so results don't
+    LOGS(logger, VERBOSE) << "ConvTranspose: output_shape is not supported as the CoreML output is inconsistent";
+    return false;
   }
 
   // output_padding, if specified, must be the default value of all zeros as there's no equivalent in CoreML.
   auto output_padding = helper.GetInt64s("output_padding");
   if (output_padding &&
       !std::all_of(output_padding->begin(), output_padding->end(), [](auto value) { return value == 0; })) {
-    LOGS(logger, VERBOSE) << not_supported << "output_padding is not supported";
+    LOGS(logger, VERBOSE) << "ConvTranspose: output_padding is not supported";
     return false;
   }
 
