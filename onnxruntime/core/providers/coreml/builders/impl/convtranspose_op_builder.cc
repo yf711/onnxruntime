@@ -31,7 +31,7 @@ class ConvTransposeOpBuilder : public BaseOpBuilder {
 // }
 
 Status ConvTransposeOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const Node& node,
-                                                     const logging::Logger& logger) const {
+                                                     const logging::Logger& /*logger*/) const {
 #if defined(COREML_ENABLE_MLPROGRAM)
   using namespace CoreML::Specification::MILSpec;  // NOLINT
   const auto& input_defs = node.InputDefs();
@@ -98,7 +98,7 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
   }
 
   // ML Program
-  // - const weight until CoreML 7
+  // - const weight until CoreML7 (iOS17)
   //   - require constant for now as non-const would be unusual and we rely on the shape of W to be known to validate
   //     the kernel_shape can be used
   // - const bias
@@ -106,7 +106,12 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
   //   - if auto_pad is same_upper or same_lower the output[i] - (input[i] * strides[i]) must be divisible by 2
   //     as the pads must be equally split as there's no upper/lower option in CoreML
   //     - punting on supporting this for now
+  //   - must be symmetric for CoreML to do the right thing
   // - const strides/dilations/groups
+  //
+  // NOTE: need to test with/without the COREML_FLAG_USE_CPU_ONLY flag being set to get an idea of how flaky the CoreML
+  // behaviour is.
+  // Update /onnxruntime/test/util/default_providers.cc:DefaultCoreMLExecutionProvider
 
   const auto& input_defs = node.InputDefs();
 
@@ -152,6 +157,16 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
   if (autopad == AutoPadType::SAME_LOWER || autopad == AutoPadType::SAME_UPPER) {
     LOGS(logger, VERBOSE) << "ConvTranspose: support for SAME_LOWER/SAME_UPPER is not implemented yet";
     return false;
+  } else if (autopad == AutoPadType::NOTSET) {
+    // CoreML output is inconsistent if pads are asymmetric.
+    // CPU works. Other devices don't seem to (at least on macOS).
+    auto onnx_pads = *helper.GetInt64s("pads");  // 'pads' are requred if auto_pad is NOTSET
+    const auto pad_value = onnx_pads[0];
+    if (!std::all_of(onnx_pads.begin() + 1, onnx_pads.end(),
+                     [pad_value](auto value) { return value == pad_value; })) {
+      LOGS(logger, VERBOSE) << "ConvTranspose: pads must be symmetric for CoreML to return consistent results";
+      return false;
+    }
   }
 
   // there's no input to specify a kernel shape in CoreML.
@@ -179,7 +194,7 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
   }
 
   // In theory this can be supported, but running with COREML_FLAG_USE_CPU_ONLY produces output that doesn't match
-  // ONNX. Running without that flag produces the expected output. Madness....
+  // ONNX. Running without that flag produces the expected output. Madness...
   auto output_shape = helper.GetInt64s("output_shape");
   if (output_shape) {
     // there is an output_shape input, but the padding seems to be different so results don't
