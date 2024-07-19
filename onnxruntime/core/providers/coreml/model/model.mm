@@ -182,13 +182,14 @@ Status CreateInputFeatureProvider(const std::unordered_map<std::string, OnnxTens
 }
 
 Status GetMLMultiArrayCopyInfo(const MLMultiArray* array, int64_t* num_blocks, int64_t* block_size, int64_t* stride) {
-  int64_t batch_stride = [array.strides[0] longLongValue];
-  int64_t data_elems = 1;  // actual values
-  int64_t total_elems = 1; // elems including empty slots if non-contiguous
   const auto* shape = array.shape;
   const auto rank = shape.count;
 
-  for (unsigned long i = 1; i < rank; i++) {
+  int64_t array_total_elements = [array.strides[0] longLongValue] * [shape[0] longLongValue];
+
+  int64_t data_elems = 1;  // actual values
+  int64_t total_elems = 1; // elems including empty slots if non-contiguous
+  for (unsigned long i = 1; i <= rank; i++) {
     int64_t this_stride = [array.strides[rank - i] longLongValue];
     if (this_stride != total_elems) {
       // non-contigous if we have to move more than batch_elems for each entry
@@ -209,11 +210,12 @@ Status GetMLMultiArrayCopyInfo(const MLMultiArray* array, int64_t* num_blocks, i
   if (*block_size == 0) {
     // contiguous
     *block_size = data_elems;
-    *stride = batch_stride;
+    *stride = array_total_elements;
   }
 
   *num_blocks = data_elems / *block_size;
 
+  ORT_ENFORCE(array_total_elements == total_elems, "Logic error calculating copy info");
   ORT_ENFORCE(*stride >= *block_size, "Logic error calculating copy info");
   ORT_ENFORCE(*stride * *num_blocks == total_elems, "Logic error calculating copy info");
 
@@ -313,10 +315,11 @@ Status CopyMLMultiArrayBuffer(const void* mlmultiarray_buffer, void* tensor_buff
   }
 
   // total including non-contiguous space
-  int64_t mlmultiarray_total_elements = [array.strides[0] longLongValue];
+
+  int64_t array_total_elements = [array.strides[0] longLongValue] * [array.shape[0] longLongValue];
   const int64_t num_elements = array.count;
 
-  ORT_RETURN_IF(mlmultiarray_total_elements != num_blocks * stride ||
+  ORT_RETURN_IF(array_total_elements != num_blocks * stride ||
                 num_elements != num_blocks * block_size,
                 "MLMultiArray size does not match the copy info");
 
@@ -661,7 +664,7 @@ Model::Model(const std::string& path,
 Model::~Model() {}
 
 Status Model::LoadModel() {
-// arbitrary place to call this. 
+ // arbitrary place to run this when manually enabled for temporary testing
 #ifdef TEST_MLMULTIARRAY_HANDLING
   ValidateMLMultiArrayHandling();
 #endif
