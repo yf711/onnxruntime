@@ -16,8 +16,6 @@ namespace onnxruntime {
 namespace coreml {
 
 class ConvTransposeOpBuilder : public BaseOpBuilder {
-  // void AddInitializersToSkip(ModelBuilder& model_builder, const Node& node) const override;
-
   Status AddToModelBuilderImpl(ModelBuilder& model_builder, const Node& node,
                                const logging::Logger& logger) const override;
 
@@ -27,10 +25,8 @@ class ConvTransposeOpBuilder : public BaseOpBuilder {
   bool SupportsMLProgram() const override { return true; }
 };
 
-// void ConvTransposeOpBuilder::AddInitializersToSkip(ModelBuilder& model_builder, const Node& node) const {
-// }
-
-Status ConvTransposeOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const Node& node,
+Status ConvTransposeOpBuilder::AddToModelBuilderImpl([[maybe_unused]] ModelBuilder& model_builder,
+                                                     [[maybe_unused]] const Node& node,
                                                      const logging::Logger& /*logger*/) const {
 #if defined(COREML_ENABLE_MLPROGRAM)
   using namespace CoreML::Specification::MILSpec;  // NOLINT
@@ -41,7 +37,6 @@ Status ConvTransposeOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder
   NodeAttrHelper helper(node);
 
   // https://apple.github.io/coremltools/source/coremltools.converters.mil.mil.ops.defs.html#coremltools.converters.mil.mil.ops.defs.iOS15.conv.conv_transpose
-
   std::unique_ptr<Operation> op = model_builder.CreateOperation(node, "conv_transpose");
   const auto& op_type = op->type();
 
@@ -108,10 +103,11 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
   //     - punting on supporting this for now
   //   - must be symmetric for CoreML to do the right thing
   // - const strides/dilations/groups
+  // - output_shape CoreML output is inconsistent so disabled for now
   //
   // NOTE: need to test with/without the COREML_FLAG_USE_CPU_ONLY flag being set to get an idea of how flaky the CoreML
   // behaviour is.
-  // Update /onnxruntime/test/util/default_providers.cc:DefaultCoreMLExecutionProvider
+  // Update /onnxruntime/test/util/default_providers.cc:DefaultCoreMLExecutionProvider to do so
 
   const auto& input_defs = node.InputDefs();
 
@@ -149,7 +145,7 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
 
   // Punt on SAME_UPPER/SAME_LOWER for now.
   // We could infer that 'same' -> 'same_upper' based on the CoreML conv spec having 'same' and 'same_lower' but
-  // need to test that assertion.
+  // need to validate that assertion.
   // Additionally, if the pads size is equal, there's no difference between same_upper and same_lower.
   // To do that we'd need the 'output_shape' attribute to check against.
   // Can add this handling if/when needed.
@@ -205,7 +201,7 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
   // output_padding, if specified, must be the default value of all zeros as there's no equivalent in CoreML.
   auto output_padding = helper.GetInt64s("output_padding");
   if (output_padding &&
-      !std::all_of(output_padding->begin(), output_padding->end(), [](auto value) { return value == 0; })) {
+      std::any_of(output_padding->begin(), output_padding->end(), [](auto value) { return value != 0; })) {
     LOGS(logger, VERBOSE) << "ConvTranspose: output_padding is not supported";
     return false;
   }
