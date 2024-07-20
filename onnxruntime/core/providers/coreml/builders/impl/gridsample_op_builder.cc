@@ -34,13 +34,22 @@ Status GridSampleOpBuilder::AddToModelBuilderImpl([[maybe_unused]] ModelBuilder&
   const auto output_defs = node.OutputDefs();
 
   std::vector<int64_t> input_shape;
+  std::vector<int64_t> grid_shape;
+
   ORT_RETURN_IF_NOT(GetShape(*input_defs[0], input_shape, logger), "Failed to get input shape");
+  ORT_RETURN_IF_NOT(GetShape(*input_defs[1], grid_shape, logger), "Failed to get grid shape");
 
   NodeAttrHelper helper(node);
-  const auto& mode = helper.Get("mode", "linear");
+  std::string mode = helper.Get("mode", "linear");
+  std::string padding_mode = helper.Get("padding_mode", "zeros");
   const bool align_corners = helper.Get("align_corners", 0);
   const std::string coordinates_mode = "normalized_minus_one_to_one";
-  std::string padding_mode = helper.Get("padding_mode", "zeros");
+
+  // adjust values to coreml equivalents
+  if (mode == "linear") {
+    mode = "bilinear";
+  }
+
   if (padding_mode == "zeros") {
     padding_mode = "constant";
   }
@@ -49,31 +58,35 @@ Status GridSampleOpBuilder::AddToModelBuilderImpl([[maybe_unused]] ModelBuilder&
   // need to multiply by input H and W to denormalize, and cast to int32 for coreml
   std::vector<float> h_w_float = {static_cast<float>(input_shape[2]), static_cast<float>(input_shape[3])};
   const int32_t float_elem_type = static_cast<int32_t>(ONNX_NAMESPACE::TensorProto_DataType_FLOAT);
-  const int32_t int32_elem_type = static_cast<int32_t>(ONNX_NAMESPACE::TensorProto_DataType_INT32);
+  // const int32_t int32_elem_type = static_cast<int32_t>(ONNX_NAMESPACE::TensorProto_DataType_INT32);
 
   auto denormalize = model_builder.CreateOperation(node, "mul");
   AddOperationInput(*denormalize, "x", input_defs[1]->Name());
   AddOperationInput(*denormalize, "y", model_builder.AddConstant(denormalize->type(), "h_w", h_w_float));
   const auto& denormalize_output = model_builder.GetUniqueName(node, "denorm");
-  AddIntermediateOperationOutput(*denormalize, denormalize_output, float_elem_type, input_shape);
+  AddIntermediateOperationOutput(*denormalize, denormalize_output, float_elem_type, grid_shape);
 
-  auto cast = model_builder.CreateOperation(node, "cast");
-  AddOperationInput(*cast, "x", denormalize_output);
-  AddOperationInput(*cast, "dtype", model_builder.AddScalarConstant(cast->type(), "to", std::string("int32")));
-  const auto& cast_output = model_builder.GetUniqueName(node, "to_int32");
-  AddIntermediateOperationOutput(*cast, cast_output, int32_elem_type, input_shape);
+  // auto cast = model_builder.CreateOperation(node, "cast");
+  // AddOperationInput(*cast, "x", denormalize_output);
+  // AddOperationInput(*cast, "dtype", model_builder.AddScalarConstant(cast->type(), "to", std::string("int32")));
+  // const auto& cast_output = model_builder.GetUniqueName(node, "to_int32");
+  // AddIntermediateOperationOutput(*cast, cast_output, int32_elem_type, input_shape);
 
   auto op = model_builder.CreateOperation(node, "resample");
   AddOperationInput(*op, "x", input_defs[0]->Name());
-  AddOperationInput(*op, "coordinates", cast_output);
+  AddOperationInput(*op, "coordinates", denormalize_output);
+  // AddOperationInput(*op, "coordinates", cast_output);
   AddOperationInput(*op, "sampling_mode", model_builder.AddScalarConstant(op->type(), "sampling_mode", mode));
   AddOperationInput(*op, "padding_mode", model_builder.AddScalarConstant(op->type(), "padding_mode", padding_mode));
-  AddOperationInput(*op, "pading_value", model_builder.AddScalarConstant(op->type(), "padding_value", 0.0f));
+  AddOperationInput(*op, "padding_value", model_builder.AddScalarConstant(op->type(), "padding_value", 0.0f));
   AddOperationInput(*op, "coordinates_mode",
                     model_builder.AddScalarConstant(op->type(), "coordinates_mode", coordinates_mode));
   AddOperationInput(*op, "align_corners", model_builder.AddScalarConstant(op->type(), "align_corners", align_corners));
 
   AddOperationOutput(*op, *output_defs[0]);
+
+  model_builder.AddOperation(std::move(denormalize));
+  model_builder.AddOperation(std::move(op));
 #endif
   return Status::OK();
 }
@@ -89,6 +102,7 @@ bool GridSampleOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInp
 
   std::vector<int64_t> input_shape;
   if (!GetShape(*input_defs[0], input_shape, logger)) {
+    LOGS(logger, VERBOSE) << "GridSample: failed to get input shape";
     return false;
   }
 
@@ -100,6 +114,14 @@ bool GridSampleOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInp
   if (input_shape[2] < 0 || input_shape[3] < 0) {
     // we need H and W to denormalize the 'grid' input
     LOGS(logger, VERBOSE) << "GridSample requires H and W dimensions to be known";
+    return false;
+  }
+
+  // we use this in AddToModelBuilderImpl but it's possible it's not required if we let coreml inference shapes
+  // for the intermediate Mul operator.
+  std::vector<int64_t> grid_shape;
+  if (!GetShape(*input_defs[1], grid_shape, logger)) {
+    LOGS(logger, VERBOSE) << "GridSample: failed to get grid shape";
     return false;
   }
 
