@@ -33,12 +33,6 @@ Status GridSampleOpBuilder::AddToModelBuilderImpl([[maybe_unused]] ModelBuilder&
   const auto input_defs = node.InputDefs();
   const auto output_defs = node.OutputDefs();
 
-  std::vector<int64_t> input_shape;
-  std::vector<int64_t> grid_shape;
-
-  ORT_RETURN_IF_NOT(GetShape(*input_defs[0], input_shape, logger), "Failed to get input shape");
-  ORT_RETURN_IF_NOT(GetShape(*input_defs[1], grid_shape, logger), "Failed to get grid shape");
-
   NodeAttrHelper helper(node);
   std::string mode = helper.Get("mode", "linear");
   std::string padding_mode = helper.Get("padding_mode", "zeros");
@@ -54,28 +48,9 @@ Status GridSampleOpBuilder::AddToModelBuilderImpl([[maybe_unused]] ModelBuilder&
     padding_mode = "constant";
   }
 
-  // grid is normalized values for H, W, 2.
-  // need to multiply by input H and W to denormalize, and cast to int32 for coreml
-  std::vector<float> h_w_float = {static_cast<float>(input_shape[2]), static_cast<float>(input_shape[3])};
-  const int32_t float_elem_type = static_cast<int32_t>(ONNX_NAMESPACE::TensorProto_DataType_FLOAT);
-  // const int32_t int32_elem_type = static_cast<int32_t>(ONNX_NAMESPACE::TensorProto_DataType_INT32);
-
-  auto denormalize = model_builder.CreateOperation(node, "mul");
-  AddOperationInput(*denormalize, "x", input_defs[1]->Name());
-  AddOperationInput(*denormalize, "y", model_builder.AddConstant(denormalize->type(), "h_w", h_w_float));
-  const auto& denormalize_output = model_builder.GetUniqueName(node, "denorm");
-  AddIntermediateOperationOutput(*denormalize, denormalize_output, float_elem_type, grid_shape);
-
-  // auto cast = model_builder.CreateOperation(node, "cast");
-  // AddOperationInput(*cast, "x", denormalize_output);
-  // AddOperationInput(*cast, "dtype", model_builder.AddScalarConstant(cast->type(), "to", std::string("int32")));
-  // const auto& cast_output = model_builder.GetUniqueName(node, "to_int32");
-  // AddIntermediateOperationOutput(*cast, cast_output, int32_elem_type, input_shape);
-
   auto op = model_builder.CreateOperation(node, "resample");
   AddOperationInput(*op, "x", input_defs[0]->Name());
-  AddOperationInput(*op, "coordinates", denormalize_output);
-  // AddOperationInput(*op, "coordinates", cast_output);
+  AddOperationInput(*op, "coordinates", input_defs[1]->Name());
   AddOperationInput(*op, "sampling_mode", model_builder.AddScalarConstant(op->type(), "sampling_mode", mode));
   AddOperationInput(*op, "padding_mode", model_builder.AddScalarConstant(op->type(), "padding_mode", padding_mode));
   AddOperationInput(*op, "padding_value", model_builder.AddScalarConstant(op->type(), "padding_value", 0.0f));
@@ -85,7 +60,6 @@ Status GridSampleOpBuilder::AddToModelBuilderImpl([[maybe_unused]] ModelBuilder&
 
   AddOperationOutput(*op, *output_defs[0]);
 
-  model_builder.AddOperation(std::move(denormalize));
   model_builder.AddOperation(std::move(op));
 #endif
   return Status::OK();
@@ -107,29 +81,27 @@ bool GridSampleOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInp
   }
 
   const auto input_rank = input_shape.size();
-  if (input_rank < 4) {
-    LOGS(logger, VERBOSE) << "GridSample only supports 4D input not " << input_rank << "D";
-  }
-
-  if (input_shape[2] < 0 || input_shape[3] < 0) {
-    // we need H and W to denormalize the 'grid' input
-    LOGS(logger, VERBOSE) << "GridSample requires H and W dimensions to be known";
-    return false;
-  }
-
-  // we use this in AddToModelBuilderImpl but it's possible it's not required if we let coreml inference shapes
-  // for the intermediate Mul operator.
-  std::vector<int64_t> grid_shape;
-  if (!GetShape(*input_defs[1], grid_shape, logger)) {
-    LOGS(logger, VERBOSE) << "GridSample: failed to get grid shape";
+  if (input_rank != 4) {
+    LOGS(logger, VERBOSE) << "GridSample only supports 4D input. Got:" << input_rank << "D";
     return false;
   }
 
   NodeAttrHelper helper(node);
-
   const auto& mode = helper.Get("mode", "linear");
-  if (mode == "cubic") {
-    LOGS(logger, VERBOSE) << "GridSample does not support cubic interpolation";
+  if (mode != "linear" && mode != "zeros") {
+    LOGS(logger, VERBOSE) << "GridSample does not support mode of " << mode;
+    return false;
+  }
+
+  // there is one combination of settings where the unit test fails. TBD whether it's an issue with the unit test
+  // or issue with CoreML. CoreML output is consistent for CPU and non-CPU.
+  const auto& padding_mode = helper.Get("padding_mode", "zeros");
+  const bool align_corners = helper.Get("align_corners", 0);
+
+  if (mode == "linear" && padding_mode == "reflection" && align_corners == false) {
+    LOGS(logger, VERBOSE) << "GridSample does not support mode:" << mode << " padding_mode:" << padding_mode
+                          << " align_corners:" << align_corners
+                          << " currently due to output diffs that need to be investigated";
     return false;
   }
 
