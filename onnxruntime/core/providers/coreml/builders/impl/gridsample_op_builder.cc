@@ -30,7 +30,11 @@ Status GridSampleOpBuilder::AddToModelBuilderImpl([[maybe_unused]] ModelBuilder&
   using namespace CoreML::Specification::MILSpec;  // NOLINT
   // https://apple.github.io/coremltools/source/coremltools.converters.mil.mil.ops.defs.html#coremltools.converters.mil.mil.ops.defs.iOS15.image_resizing.resample
 
-  auto op = model_builder.CreateOperation(node, "resample");
+  const auto input_defs = node.InputDefs();
+  const auto output_defs = node.OutputDefs();
+
+  std::vector<int64_t> input_shape;
+  ORT_RETURN_IF_NOT(GetShape(*input_defs[0], input_shape, logger), "Failed to get input shape");
 
   NodeAttrHelper helper(node);
   const auto& mode = helper.Get("mode", "linear");
@@ -41,10 +45,27 @@ Status GridSampleOpBuilder::AddToModelBuilderImpl([[maybe_unused]] ModelBuilder&
     padding_mode = "constant";
   }
 
-  const auto input_defs = node.InputDefs();
-  const auto output_defs = node.OutputDefs();
+  // grid is normalized values for H, W, 2.
+  // need to multiply by input H and W to denormalize, and cast to int32 for coreml
+  std::vector<float> h_w_float = {static_cast<float>(input_shape[2]), static_cast<float>(input_shape[3])};
+  const int32_t float_elem_type = static_cast<int32_t>(ONNX_NAMESPACE::TensorProto_DataType_FLOAT);
+  const int32_t int32_elem_type = static_cast<int32_t>(ONNX_NAMESPACE::TensorProto_DataType_INT32);
+
+  auto denormalize = model_builder.CreateOperation(node, "mul");
+  AddOperationInput(*denormalize, "x", input_defs[1]->Name());
+  AddOperationInput(*denormalize, "y", model_builder.AddConstant(denormalize->type(), "h_w", h_w_float));
+  const auto& denormalize_output = model_builder.GetUniqueName(node, "denorm");
+  AddIntermediateOperationOutput(*denormalize, denormalize_output, float_elem_type, input_shape);
+
+  auto cast = model_builder.CreateOperation(node, "cast");
+  AddOperationInput(*cast, "x", denormalize_output);
+  AddOperationInput(*cast, "dtype", model_builder.AddScalarConstant(cast->type(), "to", std::string("int32")));
+  const auto& cast_output = model_builder.GetUniqueName(node, "to_int32");
+  AddIntermediateOperationOutput(*cast, cast_output, int32_elem_type, input_shape);
+
+  auto op = model_builder.CreateOperation(node, "resample");
   AddOperationInput(*op, "x", input_defs[0]->Name());
-  AddOperationInput(*op, "coordinates", input_defs[1]->Name());
+  AddOperationInput(*op, "coordinates", cast_output);
   AddOperationInput(*op, "sampling_mode", model_builder.AddScalarConstant(op->type(), "sampling_mode", mode));
   AddOperationInput(*op, "padding_mode", model_builder.AddScalarConstant(op->type(), "padding_mode", padding_mode));
   AddOperationInput(*op, "pading_value", model_builder.AddScalarConstant(op->type(), "padding_value", 0.0f));
@@ -74,6 +95,12 @@ bool GridSampleOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInp
   const auto input_rank = input_shape.size();
   if (input_rank < 4) {
     LOGS(logger, VERBOSE) << "GridSample only supports 4D input not " << input_rank << "D";
+  }
+
+  if (input_shape[2] < 0 || input_shape[3] < 0) {
+    // we need H and W to denormalize the 'grid' input
+    LOGS(logger, VERBOSE) << "GridSample requires H and W dimensions to be known";
+    return false;
   }
 
   NodeAttrHelper helper(node);
