@@ -105,8 +105,6 @@ bool ValidateSliceComputeMetadataForCoreML(const SliceOp::PrepareForComputeMetad
 void SliceOpBuilder::AddInitializersToSkip(ModelBuilder& model_builder, const Node& node) const {
   const auto& input_defs = node.InputDefs();
 
-  // if (model_builder.CreateMLProgram()) {
-  // } else {
   model_builder.AddInitializerToSkip(input_defs[1]->Name());
   model_builder.AddInitializerToSkip(input_defs[2]->Name());
   if (input_defs.size() > 3 && input_defs[3]->Exists()) {
@@ -115,7 +113,6 @@ void SliceOpBuilder::AddInitializersToSkip(ModelBuilder& model_builder, const No
   if (input_defs.size() > 4 && input_defs[4]->Exists()) {
     model_builder.AddInitializerToSkip(input_defs[4]->Name());
   }
-  //  }
 }
 
 Status SliceOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const Node& node,
@@ -132,7 +129,7 @@ Status SliceOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const 
 
 #if defined(COREML_ENABLE_MLPROGRAM)
   if (model_builder.CreateMLProgram()) {
-    using namespace CoreML::Specification::MILSpec;
+    using namespace CoreML::Specification::MILSpec;  // NOLINT
     // https://apple.github.io/coremltools/source/coremltools.converters.mil.mil.ops.defs.html#coremltools.converters.mil.mil.ops.defs.iOS15.tensor_transformation.slice_by_index
 
     const InlinedVector<bool> begin_mask_values(rank, false);
@@ -147,14 +144,15 @@ Status SliceOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const 
       }
     }
 
-    // Only int32 and float are supported by the CoreML operation.
-    // We convert any int64 input to int32 when running the CoreML model for the partition.
+    // Only int32 and float are supported by CoreML slice_by_index.
+    // We convert any int64 model input to int32 when running the CoreML model for the partition.
     // Any other integer data created at runtime is the output from CoreML operations, and should int32 not int64.
-    // Based on that, we assume that the actual input when running will be int32, so we don't add the ONNX data
-    // type of int64 to the output to let the CoreML type inferencing validate everything (assumably it does that...)
-    int32_t input_type;
+    // Based on that, we assume that the actual input when running will be int32, so we override the output data
+    // type to reflect this. 
+    // If we were to leave it as TensorProto_DataType_INT64 the CoreML model would be invalid.
     std::optional<int32_t> output_datatype;
 
+    int32_t input_type;
     ORT_RETURN_IF_NOT(GetType(*node.InputDefs()[0], input_type, logger), "Failed to get input type");
 
     if (input_type == ONNX_NAMESPACE::TensorProto_DataType_INT64) {
