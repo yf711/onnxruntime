@@ -153,9 +153,13 @@ Status SliceOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const 
     // Based on that, we assume that the actual input when running will be int32, so we don't add the ONNX data
     // type of int64 to the output to let the CoreML type inferencing validate everything (assumably it does that...)
     int32_t input_type;
+    std::optional<int32_t> output_datatype;
+
     ORT_RETURN_IF_NOT(GetType(*node.InputDefs()[0], input_type, logger), "Failed to get input type");
 
-    const bool add_type_to_output = input_type != ONNX_NAMESPACE::TensorProto_DataType_INT64;
+    if (input_type == ONNX_NAMESPACE::TensorProto_DataType_INT64) {
+      output_datatype = ONNX_NAMESPACE::TensorProto_DataType_INT32;
+    }
 
     auto op = model_builder.CreateOperation(node, "slice_by_index");
 
@@ -172,7 +176,7 @@ Status SliceOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const 
     AddOperationInput(*op, "begin_mask", begin_mask);
     AddOperationInput(*op, "end_mask", end_mask);
 
-    AddOperationOutput(*op, *output_defs[0], add_type_to_output);
+    AddOperationOutput(*op, *output_defs[0], output_datatype);
 
     model_builder.AddOperation(std::move(op));
 

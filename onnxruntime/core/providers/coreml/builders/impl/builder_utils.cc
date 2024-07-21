@@ -162,11 +162,8 @@ void SetTensorTypeInfo(MILSpec::TensorType& tensor_type, MILSpec::DataType data_
 }
 
 void SetTensorTypeInfo(MILSpec::TensorType& tensor_type, MILSpec::DataType data_type,
-                       const ONNX_NAMESPACE::TensorShapeProto* shape, bool convert_scalar = false,
-                       bool add_type = true) {
-  if (add_type) {
-    tensor_type.set_datatype(data_type);
-  }
+                       const ONNX_NAMESPACE::TensorShapeProto* shape, bool convert_scalar = false) {
+  tensor_type.set_datatype(data_type);
 
   if (shape) {
     auto rank = shape->dim_size();
@@ -329,7 +326,8 @@ void AddIntermediateOperationOutput(COREML_SPEC::MILSpec::Operation& op, const s
   SetTensorTypeInfo(tensor_type, OnnxDataTypeToMILSpec(element_type), shape, /*convert_scalar*/ true);
 }
 
-void AddOperationOutput(COREML_SPEC::MILSpec::Operation& op, const NodeArg& output, bool add_type) {
+void AddOperationOutput(COREML_SPEC::MILSpec::Operation& op, const NodeArg& output,
+                        std::optional<int32_t> override_element_type) {
   auto& outputs = *op.mutable_outputs();
   auto& output_arg = *outputs.Add();
   output_arg.set_name(output.Name());
@@ -337,8 +335,10 @@ void AddOperationOutput(COREML_SPEC::MILSpec::Operation& op, const NodeArg& outp
   MILSpec::ValueType& value = *output_arg.mutable_type();
   MILSpec::TensorType& tensor_type = *value.mutable_tensortype();
 
-  SetTensorTypeInfo(tensor_type, OnnxDataTypeToMILSpec(output.TypeAsProto()->tensor_type().elem_type()),
-                    output.Shape(), /*convert_scalar*/ true, add_type);
+  auto elem_type = override_element_type ? *override_element_type
+                                         : output.TypeAsProto()->tensor_type().elem_type();
+
+  SetTensorTypeInfo(tensor_type, OnnxDataTypeToMILSpec(elem_type), output.Shape(), /*convert_scalar*/ true);
 }
 
 void AddPadTypeAndPads(COREML_SPEC::MILSpec::Operation& op, ModelBuilder& model_builder, std::string_view op_type,
