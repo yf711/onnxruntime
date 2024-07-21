@@ -147,32 +147,17 @@ Status SliceOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const 
       }
     }
 
-    auto op = model_builder.CreateOperation(node, "slice_by_index");
-
-    // only int32 and float are supported.
-    // 2 options:
-    // - Safe option is to cast to int32
-    //   - slicing int64 data is generally shape manipulation so there are only a few elements and this should be fine
-    // - Performance option would be claim the input data is float as that has the same data size
-    //   - slicing is moving data around and it doesn't matter what the values in the bits being moved represent
-    //   - unknown if we can simply lie about the data type for this operation without breaking the coreml model
-    // Use the safe option for now. Investigate the performance option if/when needed.
+    // Only int32 and float are supported by the CoreML operation.
+    // We convert any int64 input to int32 when running the CoreML model for the partition.
+    // Any other integer data created at runtime is the output from CoreML operations, and should int32 not int64.
+    // Based on that, we assume that the actual input when running will be int32, so we don't add the ONNX data
+    // type of int64 to the output to let the CoreML type inferencing validate everything (assumably it does that...)
     int32_t input_type;
     ORT_RETURN_IF_NOT(GetType(*node.InputDefs()[0], input_type, logger), "Failed to get input type");
 
-    if (input_type == ONNX_NAMESPACE::TensorProto_DataType_INT64) {
-      auto cast = model_builder.CreateOperation(node, "cast");
-      AddOperationInput(*cast, "x", input_defs[0]->Name());
-      AddOperationInput(*cast, "dtype", model_builder.AddScalarConstant(cast->type(), "to", std::string("int32")));
+    const bool add_type_to_output = input_type != ONNX_NAMESPACE::TensorProto_DataType_INT64;
 
-      const auto& cast_output = model_builder.GetUniqueName(node.Name() + "_to_int32");
-      AddIntermediateOperationOutput(*cast, cast_output, static_cast<int>(ONNX_NAMESPACE::TensorProto_DataType_INT32),
-                                     data_shape);
-
-      AddOperationInput(*op, "x", cast_output);
-    } else {
-      AddOperationInput(*op, "x", input_defs[0]->Name());
-    }
+    auto op = model_builder.CreateOperation(node, "slice_by_index");
 
     auto begin = model_builder.AddConstant(op->type(), "begin", AsSpan(compute_metadata.starts_));
     auto end = model_builder.AddConstant(op->type(), "end", AsSpan(compute_metadata.ends_));
@@ -187,7 +172,8 @@ Status SliceOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder, const 
     AddOperationInput(*op, "begin_mask", begin_mask);
     AddOperationInput(*op, "end_mask", end_mask);
 
-    AddOperationOutput(*op, *output_defs[0]);
+    AddOperationOutput(*op, *output_defs[0], add_type_to_output);
+
     model_builder.AddOperation(std::move(op));
 
   } else  // NOLINT
