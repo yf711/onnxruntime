@@ -83,7 +83,7 @@ Status ActivationOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder,
     using namespace CoreML::Specification::MILSpec;
     // https://apple.github.io/coremltools/source/coremltools.converters.mil.mil.ops.defs.html#module-coremltools.converters.mil.mil.ops.defs.iOS15.activation
     std::string_view coreml_op_type;
-    bool add_alpha;
+    bool add_alpha = false;
     if (op_type == "Sigmoid") {
       coreml_op_type = "sigmoid";
     } else if (op_type == "Tanh") {
