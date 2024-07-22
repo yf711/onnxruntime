@@ -30,8 +30,8 @@ Status ConvTransposeOpBuilder::AddToModelBuilderImpl([[maybe_unused]] ModelBuild
                                                      const logging::Logger& /*logger*/) const {
 #if defined(COREML_ENABLE_MLPROGRAM)
   using namespace CoreML::Specification::MILSpec;  // NOLINT
-  const auto input_defs = node.InputDefs();
-  const auto output_defs = node.OutputDefs();
+  const auto& input_defs = node.InputDefs();
+  const auto& output_defs = node.OutputDefs();
   const auto& input_name = input_defs[0]->Name();
 
   NodeAttrHelper helper(node);
@@ -67,7 +67,7 @@ Status ConvTransposeOpBuilder::AddToModelBuilderImpl([[maybe_unused]] ModelBuild
   // const auto output_shape = helper.GetInt64s("output_shape");
   // if (output_shape) {
   //  AddOperationInput(*op, "output_shape", model_builder.AddConstant(op_type, "output_shape", *output_shape));
-  //  // these are required despite the spec saying
+  //  // these are required despite the spec saying otherwise
   //  AddOperationInput(*op, "pad_type", model_builder.AddScalarConstant(op_type, "pad_type", std::string("valid")));
   //  std::vector<int64_t> pads(num_spatial_dims * 2, 0);
   //  AddOperationInput(*op, "pad", model_builder.AddConstant(op_type, "pad", pads));
@@ -106,7 +106,7 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
   // - output_shape CoreML output is inconsistent so disabled for now
   //
   // NOTE: need to test with/without the COREML_FLAG_USE_CPU_ONLY flag being set to get an idea of how flaky the CoreML
-  // behaviour is.
+  // behavior is.
   // Update /onnxruntime/test/util/default_providers.cc:DefaultCoreMLExecutionProvider to do so
 
   const auto& input_defs = node.InputDefs();
@@ -154,13 +154,14 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
     LOGS(logger, VERBOSE) << "ConvTranspose: support for SAME_LOWER/SAME_UPPER is not implemented yet";
     return false;
   } else if (autopad == AutoPadType::NOTSET) {
-    // CoreML output is inconsistent if pads are asymmetric.
-    // CPU works. Other devices don't seem to (at least on macOS).
-    auto onnx_pads = *helper.GetInt64s("pads");  // 'pads' are requred if auto_pad is NOTSET
+    // CoreML output is inconsistent between CPU_ONLY and ALL if the pads aren't all the same value.
+    // CPU matches the expected output, but other devices don't seem to (at least on macOS).
+    auto onnx_pads = *helper.GetInt64s("pads");  // 'pads' are required if auto_pad is NOTSET
     const auto pad_value = onnx_pads[0];
     if (!std::all_of(onnx_pads.begin() + 1, onnx_pads.end(),
                      [pad_value](auto value) { return value == pad_value; })) {
-      LOGS(logger, VERBOSE) << "ConvTranspose: pads must be symmetric for CoreML to return consistent results";
+      LOGS(logger, VERBOSE) << "ConvTranspose: all pad values must be the same for CoreML to return "
+                               "consistent results";
       return false;
     }
   }
@@ -193,7 +194,6 @@ bool ConvTransposeOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilder
   // ONNX. Running without that flag produces the expected output. Madness...
   auto output_shape = helper.GetInt64s("output_shape");
   if (output_shape) {
-    // there is an output_shape input, but the padding seems to be different so results don't
     LOGS(logger, VERBOSE) << "ConvTranspose: output_shape is not supported as the CoreML output is inconsistent";
     return false;
   }

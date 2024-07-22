@@ -12,13 +12,13 @@
 namespace onnxruntime {
 namespace test {
 namespace {
-  auto ValidateGetInfo(MLMultiArray * array,
-                              int64_t expected_num_blocks, int64_t expected_block_size, int64_t expected_stride,
-                              bool expect_valid) {
+auto ValidateGetInfo(MLMultiArray* array,
+                     int64_t expected_num_blocks, int64_t expected_block_size, int64_t expected_stride,
+                     bool expect_valid) {
   int64_t num_blocks = 0;
   int64_t block_size = 0;
   int64_t stride = 0;
-  auto status = coreml::GetMLMultiArrayCopyInfo(array, &num_blocks, &block_size, &stride);
+  auto status = coreml::GetMLMultiArrayCopyInfo(array, num_blocks, block_size, stride);
 
   if (!expect_valid) {
     ASSERT_STATUS_NOT_OK(status);
@@ -30,9 +30,9 @@ namespace {
   ASSERT_EQ(block_size, expected_block_size);
   ASSERT_EQ(stride, expected_stride);
 }
-}
-TEST(CoreMLUtils, GetMLMultiArrayReadInfo) {
+}  // namespace
 
+TEST(CoreMLUtils, GetMLMultiArrayReadInfo) {
   // fake pointer. we don't read any data but initWithDataPointer requires a non-null address
   void* data = reinterpret_cast<void*>(0xfeedf00d);
 
