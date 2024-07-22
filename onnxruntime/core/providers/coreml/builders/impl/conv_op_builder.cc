@@ -28,6 +28,11 @@ class ConvOpBuilder : public BaseOpBuilder {
 };
 
 void ConvOpBuilder::AddInitializersToSkip(ModelBuilder& model_builder, const Node& node) const {
+  if (model_builder.CreateMLProgram()) {
+    // we add the initializers as 'const' operations via ModelBuilder::RegisterInitializers
+    return;
+  }
+
   const auto& input_defs = node.InputDefs();
 
   // skip the weight and bias (if has it) for conv as we will directly set those as part of the NN layer
