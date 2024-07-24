@@ -209,7 +209,7 @@ bool ActivationOpBuilder::IsOpSupportedImpl(const Node& node, const OpBuilderInp
 
 #if defined(COREML_ENABLE_MLPROGRAM)
   if (input_params.create_mlprogram) {
-    if (op_type == "PRelu") {  // TODO
+    if (op_type == "PRelu") {  // TODO: ML Program supports this so should be easy to enable
       return false;
     }
   } else
