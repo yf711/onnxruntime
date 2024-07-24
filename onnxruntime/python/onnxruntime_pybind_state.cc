@@ -35,6 +35,8 @@
 #include "contrib_ops/cpu/aten_ops/aten_op_executor.h"
 #endif
 
+#ifdef USE_CUDA
+#include <cuda.h>   // for CUDA_VERSION
 #include <cudnn.h>  // for CUDNN_MAJOR
 #endif
 
