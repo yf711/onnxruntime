@@ -28,7 +28,7 @@ Status ConcatOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder,
                                               const logging::Logger& logger) const {
 #if defined(COREML_ENABLE_MLPROGRAM)
   if (model_builder.CreateMLProgram()) {
-    using namespace CoreML::Specification::MILSpec;
+    using namespace CoreML::Specification::MILSpec;  // NOLINT
 
     NodeAttrHelper helper(node);
     const auto axis = helper.GetInt64("axis");  // required
@@ -37,7 +37,6 @@ Status ConcatOpBuilder::AddToModelBuilderImpl(ModelBuilder& model_builder,
     std::unique_ptr<Operation> op = model_builder.CreateOperation(node, "concat");
     std::vector<std::string_view> input_names;
     for (const auto* input : node.InputDefs()) {
-      LOGS(logger, VERBOSE) << "input name " << input->Name();
       input_names.emplace_back(input->Name());
     }
     AddOperationInputs(*op, "values", input_names);

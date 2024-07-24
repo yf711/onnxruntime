@@ -164,7 +164,6 @@ void SetTensorTypeInfo(MILSpec::TensorType& tensor_type, MILSpec::DataType data_
 void SetTensorTypeInfo(MILSpec::TensorType& tensor_type, MILSpec::DataType data_type,
                        const ONNX_NAMESPACE::TensorShapeProto* shape, bool convert_scalar = false) {
   tensor_type.set_datatype(data_type);
-
   if (shape) {
     auto rank = shape->dim_size();
     if (convert_scalar && rank == 0) {
@@ -316,10 +315,12 @@ void AddOperationInput(MILSpec::Operation& op, std::string_view input_name, std:
 
 void AddOperationInputs(MILSpec::Operation& op, std::string_view input_name,
                         const std::vector<std::string_view>& value_names) {
-  MILSpec::Argument& arg = (*op.mutable_inputs())[input_name];
+  MILSpec::Argument arg;
   for (const auto& value : value_names) {
     arg.mutable_arguments()->Add()->set_name(std::string(value));
   }
+
+  (*op.mutable_inputs())[input_name] = std::move(arg);
 }
 
 void AddIntermediateOperationOutput(COREML_SPEC::MILSpec::Operation& op, const std::string& output_name,
