@@ -68,6 +68,8 @@ static OpBuilderRegistrations CreateOpBuilderRegistrations() {
 
   CreateGridSampleOpBuilder("GridSample", op_registrations);
 
+  CreateGridSampleOpBuilder("GridSample", op_registrations);
+
   return op_registrations;
 }
 
