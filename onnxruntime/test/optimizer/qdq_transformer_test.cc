@@ -3525,8 +3525,7 @@ TEST(QDQTransformerTests, QDQ_Selector_Test) {
     const auto compute_capability = utils::MakeComputeCapability(
         whole_graph_viewer, nodes,
         []() { return "sub_graph"; },
-        "Test Provider",
-        /* drop_constant_initializers */ false);
+        "Test Provider");
 
     const GraphViewer partial_graph_viewer(graph, *compute_capability->sub_graph);
     ASSERT_EQ(3, partial_graph_viewer.NumberOfNodes());
