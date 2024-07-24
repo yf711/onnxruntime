@@ -62,10 +62,10 @@ Create the supported partitions for the execution provider.
 @param execution_provider_type ExecutionProviderType of the EP creating this ComputeCapability instance.
 @param node_unit_map Map of each Node in the graph_viewer to its NodeUnit. Provide if EP handles QDQ format models.
                      Should be created by EP calling GetAllNodeUnits.
-@param drop_constant_initializer Drop constant initializers from input to a ComputeCapability. 
+@param drop_constant_initializer Drop constant initializers from input to a ComputeCapability.
                                  Set to true if constant initializers have been copied into a compiled model to allow
                                  ORT to free the initializer. If the initializer remains as an input it will appear to
-                                 still be in-use. 
+                                 still be in-use.
 @returns ComputeCapability instances for all partitions assigned to the execution provider.
 */
 std::vector<std::unique_ptr<ComputeCapability>>
@@ -89,10 +89,10 @@ Create the supported partitions for the execution provider.
 @param execution_provider_type ExecutionProviderType of the EP creating this ComputeCapability instance.
 @param node_unit_map Map of each Node in the graph_viewer to its NodeUnit. Provide if EP handles QDQ format models.
                      Should be created by EP calling GetAllNodeUnits.
-@param drop_constant_initializer Drop constant initializers from input to a ComputeCapability. 
+@param drop_constant_initializer Drop constant initializers from input to a ComputeCapability.
                                  Set to true if constant initializers have been copied into a compiled model to allow
                                  ORT to free the initializer. If the initializer remains as an input it will appear to
-                                 still be in-use. 
+                                 still be in-use.
 @returns ComputeCapability instances for all partitions assigned to the execution provider.
 */
 std::vector<std::unique_ptr<ComputeCapability>>
