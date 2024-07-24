@@ -28,15 +28,15 @@ static OpBuilderRegistrations CreateOpBuilderRegistrations() {
 
   // Binary elementwise ops
   CreateBinaryOpBuilder("Add", op_registrations);
+  CreateBinaryOpBuilder("Div", op_registrations);
   CreateBinaryOpBuilder("Mul", op_registrations);
   CreateBinaryOpBuilder("Pow", op_registrations);
   CreateBinaryOpBuilder("Sub", op_registrations);
-  CreateBinaryOpBuilder("Div", op_registrations);
 
   // Pooling ops
+  CreatePoolOpBuilder("AveragePool", op_registrations);
   CreatePoolOpBuilder("GlobalAveragePool", op_registrations);
   CreatePoolOpBuilder("GlobalMaxPool", op_registrations);
-  CreatePoolOpBuilder("AveragePool", op_registrations);
   CreatePoolOpBuilder("MaxPool", op_registrations);
 
   // Reduction ops
