@@ -40,6 +40,10 @@
 #include <cudnn.h>  // for CUDNN_MAJOR
 #endif
 
+#if defined(USE_COREML)
+#include "core/providers/coreml/coreml_provider_factory.h"
+#endif
+
 #include <pybind11/functional.h>
 
 // Explicitly provide a definition for the static const var 'GPU' in the OrtDevice struct,
