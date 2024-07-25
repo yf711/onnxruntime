@@ -364,6 +364,8 @@ stages:
       workingDirectory: '$(Build.BinariesDirectory)/nuget-artifact'
       displayName: 'List artifacts'
 
+    - template: set-version-number-variables-step.yml
+
     # Reconstruct the build dir
     - task: PowerShell@2
       displayName: 'Extract native libraries for addition to nuget native package'
