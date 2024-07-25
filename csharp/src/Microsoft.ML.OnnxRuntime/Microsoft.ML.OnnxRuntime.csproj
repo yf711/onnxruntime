@@ -60,8 +60,10 @@
     <!--- The parameter OrtPackageId is only used for some conditional logic below -->
     <PackageId>Microsoft.ML.OnnxRuntime.Managed</PackageId>
     <Authors>Microsoft</Authors>
-    <PackageVersion Condition=" '$(PackageVersion)' == '' And '$(Configuration)' == 'Debug' ">1.0.0</PackageVersion>
-    <PackageVersion Condition=" '$(PackageVersion)' == '' ">0.0.0</PackageVersion>
+    <!-- Ignore any passed in value unless this is a release build. -->
+    <PackageVersion Condition="'$(IsReleaseBuild)' != 'true'"></PackageVersion>
+    <PackageVersion Condition="'$(PackageVersion)' == '' And '$(Configuration)' == 'Debug'">1.0.0</PackageVersion>
+    <PackageVersion Condition="'$(PackageVersion)' == '' ">0.0.0</PackageVersion>
     <Version>$(PackageVersion)</Version>
     <Description>This package contains ONNX Runtime for .Net platforms</Description>
     <PackageTags>ONNX;ONNX Runtime;Machine Learning</PackageTags>
