@@ -1,4 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsWindowsBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">true</IsWindowsBuild>
+		<IsAndroidBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">true</IsAndroidBuild>
+		<IsIOSBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">true</IsLinuxBuild>
+		<IsMacCatalystBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">true</IsMacCatalystBuild>
+
+	</PropertyGroup>
 
 	<PropertyGroup>
 		<TargetFrameworks>net8.0-android;net8.0-ios;net8.0-maccatalyst</TargetFrameworks>
@@ -19,6 +26,7 @@
 		<SingleProject>true</SingleProject>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
 		<!-- TODO: Do we need to set the CI property in the CI yaml or is it automatic? -->
 		<DefineConstants Condition="'$(CI)' != 'true'">$(DefineConstants);INCLUDE_FAILING_TESTS</DefineConstants>
@@ -35,12 +43,15 @@
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
 		<ApplicationVersion>1</ApplicationVersion>
 
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">11.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">13.1</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
-		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="'$(IsIOSBuild)' == 'true'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="'$(IsMacCatalystBuild)' == 'true'">13.1</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="'$(IsAndroidBuild)' == 'true'">21.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="'$(IsWindowsBuild)' == 'true'">10.0.17763.0</SupportedOSPlatformVersion>
+		<TargetPlatformMinVersion Condition="'$(IsWindowsBuild)' == 'true'">10.0.17763.0</TargetPlatformMinVersion>
+
+		<SignAssembly>true</SignAssembly>
+		<AssemblyOriginatorKeyFile>..\..\OnnxRuntime.snk</AssemblyOriginatorKeyFile>
+
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -73,8 +84,75 @@
 		<Compile Include="Platforms\Windows\**" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'" />
 		<Compile Include="Platforms\Tizen\**" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'" />
 	</ItemGroup>
+	-->
+	<ItemGroup>
+		<Compile Include="..\Microsoft.ML.OnnxRuntime.Tests.Common\InferenceTest.cs">
+			<Link>InferenceTest.cs</Link>
+		</Compile>
+		<Compile Include="..\Microsoft.ML.OnnxRuntime.Tests.Common\OrtIoBindingAllocationTest.cs">
+			<Link>OrtIoBindingAllocationTest.cs</Link>
+		</Compile>
+		<Compile Include="..\Microsoft.ML.OnnxRuntime.Tests.Common\Tensors\TensorTests.cs">
+			<Link>TensorTests.cs</Link>
+		</Compile>
+	</ItemGroup>
 
-	 -->
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\Microsoft.ML.OnnxRuntime\Microsoft.ML.OnnxRuntime.csproj"
+						  name="Microsoft.ML.OnnxRuntime" />
+		<ProjectReference Include="..\Microsoft.ML.OnnxRuntime.Tests.Common\Microsoft.ML.OnnxRuntime.Tests.Common.csproj"
+						  name="Microsoft.ML.OnnxRuntime.Tests.Common" />
+		<ProjectReference Include="..\Microsoft.ML.OnnxRuntime.Tests.Devices\Microsoft.ML.OnnxRuntime.Tests.Devices.csproj"
+						  name="Microsoft.ML.OnnxRuntime.Tests.Devices" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Condition="'$(IsWindowsBuild)'=='true'"
+			Include="$(NativeBuildOutputDir)\onnxruntime.dll;
+				$(NativeBuildOutputDir)\onnxruntime.pdb;
+				$(NativeBuildOutputDir)\onnxruntime_providers_*.dll;
+				$(NativeBuildOutputDir)\onnxruntime_providers_*.pdb;
+				$(NativeBuildOutputDir)\custom_op_library*.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Visible>false</Visible>
+		</None>
+
+		<None Condition="'$(IsLinuxBuild)'=='true'"
+			Include="$(NativeBuildOutputDir)\libonnxruntime.so;
+			$(NativeBuildOutputDir)\libonnxruntime_providers_*.so;
+			$(NativeBuildOutputDir)\libcustom_op_library*.so">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Visible>false</Visible>
+		</None>
+
+		<None Condition="'$(IsMacOSBuild)'=='true'"
+			Include="$(NativeBuildOutputDir)\libonnxruntime.dylib;
+			$(NativeBuildOutputDir)\libonnxruntime_providers_*.dylib;
+			$(NativeBuildOutputDir)\libcustom_op_library*.dylib">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Visible>false</Visible>
+		</None>
+
+		<None Include="$(OnnxRuntimeCSharpRoot)\testdata\*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Visible>false</Visible>
+			</None>
+			<None Include="$(OnnxRuntimeCSharpRoot)\..\onnxruntime\test\testdata\overridable_initializer.onnx">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Visible>false</Visible>
+		</None>
+		<None Include="$(OnnxRuntimeCSharpRoot)\..\onnxruntime\test\testdata\capi_symbolic_dims.onnx">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Visible>false</Visible>
+		</None>
+		<None Include="$(OnnxRuntimeCSharpRoot)\..\onnxruntime\test\testdata\custom_op_library\custom_op_test.onnx">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Visible>false</Visible>
+		</None>
+		<BuildEnvVars Include="OnnxRuntimeBuildDirectory=$(OnnxRuntimeBuildDirectory)" />
+	</ItemGroup>
+
+
 	<ItemGroup>
 		<PackageReference Include="DeviceRunners.VisualRunners.Maui" Version="0.1.0-preview.2" />
 		<PackageReference Include="DeviceRunners.VisualRunners.Xunit" Version="0.1.0-preview.2" />

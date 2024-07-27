@@ -1,4 +1,7 @@
-﻿#define MODE_XHARNESS
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
+// Based on https://github.com/mattleibow/DeviceRunners/tree/main/sample/SampleMauiApp
 
 using DeviceRunners.VisualRunners;
 using Microsoft.Extensions.Logging;
@@ -19,7 +22,10 @@ public static class MauiProgram
 #if MODE_XHARNESS
             .UseXHarnessTestRunner(conf => conf
                 .AddTestAssembly(typeof(MauiProgram).Assembly)
-                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.UnitTests).Assembly)
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.PlatformTests).Assembly)
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.InferenceTest).Assembly)
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.OrtIoBindingAllocationTests).Assembly)
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tensors.Tests.TensorTests).Assembly)
                 .AddXunit())
 #endif
             .UseVisualTestRunner(conf => conf
@@ -35,7 +41,10 @@ public static class MauiProgram
 //#endif
                 .AddConsoleResultChannel()
                 .AddTestAssembly(typeof(MauiProgram).Assembly)
-                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.UnitTests).Assembly)
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.PlatformTests).Assembly)
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.InferenceTest).Assembly)
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.OrtIoBindingAllocationTests).Assembly)
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tensors.Tests.TensorTests).Assembly)
                 .AddXunit());
 
 #if DEBUG
