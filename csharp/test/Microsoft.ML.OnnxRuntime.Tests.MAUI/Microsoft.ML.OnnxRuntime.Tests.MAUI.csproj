@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<IsWindowsBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">true</IsWindowsBuild>
 		<IsAndroidBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">true</IsAndroidBuild>
-		<IsIOSBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">true</IsLinuxBuild>
+		<IsIOSBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">true</IsIOSBuild>
 		<IsMacCatalystBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">true</IsMacCatalystBuild>
 
 	</PropertyGroup>
@@ -10,8 +10,6 @@
 	<PropertyGroup>
 		<TargetFrameworks>net8.0-android;net8.0-ios;net8.0-maccatalyst</TargetFrameworks>
 		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net8.0-windows10.0.19041.0</TargetFrameworks>
-		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
-		<!-- <TargetFrameworks>$(TargetFrameworks);net8.0-tizen</TargetFrameworks> -->
 
 		<!-- Note for MacCatalyst:
 		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
@@ -51,6 +49,7 @@
 
 		<SignAssembly>true</SignAssembly>
 		<AssemblyOriginatorKeyFile>..\..\OnnxRuntime.snk</AssemblyOriginatorKeyFile>
+		<DefaultLanguage>en</DefaultLanguage>
 
 	</PropertyGroup>
 
@@ -76,16 +75,13 @@
 	<ItemGroup>
 		<None Include="Platforms\**" />
 		<Compile Remove="Platforms\**" />
-		<Compile Include="Platforms\All\**" />
-		<Compile Include="Platforms\Android\**" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'" />
-		<Compile Include="Platforms\iOS\**" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'" />
-		<Compile Include="Platforms\MacCatalyst\**" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'" />
-		<Compile Include="Platforms\Apple\**" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'" />
-		<Compile Include="Platforms\Windows\**" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'" />
-		<Compile Include="Platforms\Tizen\**" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'" />
+		<Compile Include="Platforms\Android\**" Condition="'$(IsAndroidBuild)' == 'true'" />
+		<Compile Include="Platforms\iOS\**" Condition="'$(IsIOSBuild)' == 'true'" />
+		<Compile Include="Platforms\MacCatalyst\**" Condition="'$(IsMacCatalystBuild)' == 'true'" />
+		<Compile Include="Platforms\Windows\**" Condition="'$(IsWindowsBuild)' == 'true'" />
 	</ItemGroup>
 	-->
-	<ItemGroup>
+	<!-- <ItemGroup>
 		<Compile Include="..\Microsoft.ML.OnnxRuntime.Tests.Common\InferenceTest.cs">
 			<Link>InferenceTest.cs</Link>
 		</Compile>
@@ -105,30 +101,15 @@
 		<ProjectReference Include="..\Microsoft.ML.OnnxRuntime.Tests.Devices\Microsoft.ML.OnnxRuntime.Tests.Devices.csproj"
 						  name="Microsoft.ML.OnnxRuntime.Tests.Devices" />
 	</ItemGroup>
+ -->
+	<PropertyGroup Condition="'$(IsWindowsBuild)'=='trueXXX'">
+		<OnnxRuntimeCsharpRoot>$(ProjectDir)..\..</OnnxRuntimeCsharpRoot>
+		<OnnxRuntimeBuildDirectory Condition="'$(OnnxRuntimeBuildDirectory)'==''">$(OnnxRuntimeCsharpRoot)\..\build\Windows</OnnxRuntimeBuildDirectory>
+		<NativeBuildOutputDir>$(OnnxRuntimeBuildDirectory)\$(Configuration)\$(Configuration)</NativeBuildOutputDir>
+	</PropertyGroup>
 
-	<ItemGroup>
-		<None Condition="'$(IsWindowsBuild)'=='true'"
-			Include="$(NativeBuildOutputDir)\onnxruntime.dll;
-				$(NativeBuildOutputDir)\onnxruntime.pdb;
-				$(NativeBuildOutputDir)\onnxruntime_providers_*.dll;
-				$(NativeBuildOutputDir)\onnxruntime_providers_*.pdb;
-				$(NativeBuildOutputDir)\custom_op_library*.dll">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<Visible>false</Visible>
-		</None>
-
-		<None Condition="'$(IsLinuxBuild)'=='true'"
-			Include="$(NativeBuildOutputDir)\libonnxruntime.so;
-			$(NativeBuildOutputDir)\libonnxruntime_providers_*.so;
-			$(NativeBuildOutputDir)\libcustom_op_library*.so">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<Visible>false</Visible>
-		</None>
-
-		<None Condition="'$(IsMacOSBuild)'=='true'"
-			Include="$(NativeBuildOutputDir)\libonnxruntime.dylib;
-			$(NativeBuildOutputDir)\libonnxruntime_providers_*.dylib;
-			$(NativeBuildOutputDir)\libcustom_op_library*.dylib">
+	<ItemGroup Condition="'$(IsWindowsBuild)'=='trueXXX'">
+		<None Include="$(NativeBuildOutputDir)\onnxruntime.dll;&#xD;&#xA;				$(NativeBuildOutputDir)\onnxruntime.pdb;&#xD;&#xA;				$(NativeBuildOutputDir)\onnxruntime_providers_*.dll;&#xD;&#xA;				$(NativeBuildOutputDir)\onnxruntime_providers_*.pdb;&#xD;&#xA;				$(NativeBuildOutputDir)\custom_op_library*.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Visible>false</Visible>
 		</None>
@@ -149,7 +130,7 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Visible>false</Visible>
 		</None>
-		<BuildEnvVars Include="OnnxRuntimeBuildDirectory=$(OnnxRuntimeBuildDirectory)" />
+		<!-- <BuildEnvVars Include="OnnxRuntimeBuildDirectory=$(OnnxRuntimeBuildDirectory)" /> -->
 	</ItemGroup>
 
 

@@ -41,10 +41,10 @@
 
 	<ItemGroup>
 		<EmbeddedResource Include="..\..\..\testdata\bench.in">
-		<Link>TestData\bench.in</Link>
+			<Link>TestData\bench.in</Link>
 		</EmbeddedResource>
 		<EmbeddedResource Include="..\..\..\testdata\squeezenet.onnx">
-		<Link>TestData\squeezenet.onnx</Link>
+			<Link>TestData\squeezenet.onnx</Link>
 		</EmbeddedResource>
 	</ItemGroup>
 
