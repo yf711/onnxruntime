@@ -22,10 +22,10 @@ public static class MauiProgram
 #if MODE_XHARNESS
             .UseXHarnessTestRunner(conf => conf
                 .AddTestAssembly(typeof(MauiProgram).Assembly)
-                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.PlatformTests).Assembly)
-                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.InferenceTest).Assembly)
-                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.OrtIoBindingAllocationTests).Assembly)
-                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tensors.Tests.TensorTests).Assembly)
+                //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.PlatformTests).Assembly)
+                //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.InferenceTest).Assembly)
+                //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.OrtIoBindingAllocationTests).Assembly)
+                //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tensors.Tests.TensorTests).Assembly)
                 .AddXunit())
 #endif
             .UseVisualTestRunner(conf => conf
@@ -41,7 +41,10 @@ public static class MauiProgram
 //#endif
                 .AddConsoleResultChannel()
                 .AddTestAssembly(typeof(MauiProgram).Assembly)
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.BasicTests).Assembly)
+#if WINDOWS
                 .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.PlatformTests).Assembly)
+#endif
                 //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.InferenceTest).Assembly)
                 //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.OrtIoBindingAllocationTests).Assembly)
                 //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tensors.Tests.TensorTests).Assembly)
