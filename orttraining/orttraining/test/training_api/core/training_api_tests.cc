@@ -111,6 +111,7 @@ void TestModuleExport(const std::vector<std::shared_ptr<IExecutionProvider>>& pr
 
   std::vector<std::string> graph_output_names({"output-0"});
   ASSERT_STATUS_OK(model->ExportModelForInferencing(ToUTF8String(inference_model_path), graph_output_names));
+  ASSERT_TRUE(false) << "Made it past the export for inferenc without failing";
 
   // Load model
   ONNX_NAMESPACE::ModelProto eval_model;

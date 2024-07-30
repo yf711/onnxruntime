@@ -369,7 +369,10 @@ Module::Module(const ModelIdentifiers& model_identifiers,
   }
 
   if (model_identifiers.IsEvalModelAvailable()) {
-    eval_sess_ = std::make_unique<onnxruntime::InferenceSession>(session_options, env);
+    onnxruntime::SessionOptions eval_session_options = session_options;
+    eval_session_options.graph_optimization_level = TransformerLevel::Default;
+    eval_sess_ = std::make_unique<onnxruntime::InferenceSession>(eval_session_options, env);
+//    eval_sess_ = std::make_unique<onnxruntime::InferenceSession>(session_options, env);
 #if !defined(ORT_MINIMAL_BUILD) || defined(ORT_MINIMAL_BUILD_CUSTOM_OPS)
     if (!op_domains.empty()) {
       ORT_THROW_IF_ERROR(eval_sess_->AddCustomOpDomains(op_domains));
