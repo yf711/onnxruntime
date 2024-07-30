@@ -67,6 +67,7 @@
 		<PrebuiltAAR>$(PrebuiltRuntimesDir)\android\native\onnxruntime.aar</PrebuiltAAR>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(IsIOSBuild)' == 'true'">
+		<!-- TODO: should be able to detect whether it's a simulator build or not automatically? -->
 		<Platform Condition=" '$(Platform)' == '' ">iPhoneSimulator</Platform>
 		<NativeBuildOutputDir>$(OnnxRuntimeRoot)\build\iOS\$(Configuration)\$(Configuration)-$(Platform)</NativeBuildOutputDir>
 		<PrebuiltFramework>$(PrebuiltRuntimesDir)\ios\native\onnxruntime.xcframework</PrebuiltFramework>
