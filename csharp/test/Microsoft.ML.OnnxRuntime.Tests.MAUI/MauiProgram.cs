@@ -41,13 +41,12 @@ public static class MauiProgram
 //#endif
                 .AddConsoleResultChannel()
                 .AddTestAssembly(typeof(MauiProgram).Assembly)
-                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.BasicTests).Assembly)
-#if WINDOWS
+// #if WINDOWS
                 .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.PlatformTests).Assembly)
-#endif
-                //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.InferenceTest).Assembly)
-                //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.OrtIoBindingAllocationTests).Assembly)
-                //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tensors.Tests.TensorTests).Assembly)
+// #endif
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.InferenceTest).Assembly)
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.OrtIoBindingAllocationTests).Assembly)
+                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tensors.Tests.TensorTests).Assembly)
                 .AddXunit());
 
 #if DEBUG
