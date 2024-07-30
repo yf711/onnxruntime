@@ -40,17 +40,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<EmbeddedResource Include="..\..\..\testdata\bench.in">
-			<Link>TestData\bench.in</Link>
+		<Link>TestData\bench.in</Link>
 		</EmbeddedResource>
 		<EmbeddedResource Include="..\..\..\testdata\squeezenet.onnx">
-			<Link>TestData\squeezenet.onnx</Link>
+		<Link>TestData\squeezenet.onnx</Link>
 		</EmbeddedResource>
 	</ItemGroup>
 
