@@ -111,16 +111,18 @@ def _build_for_apple_sysroot(
         lipo_command += ["-output", os.path.join(framework_dir, "Versions", "A", "onnxruntime")]
         subprocess.run(lipo_command, shell=False, check=True)
 
-        # create the symbolic link
-        pathlib.Path(os.path.join(framework_dir, "Versions", "Current")).symlink_to("A", target_is_directory=True)
-        pathlib.Path(os.path.join(framework_dir, "Headers")).symlink_to(
-            "Versions/Current/Headers", target_is_directory=True
-        )
-        pathlib.Path(os.path.join(framework_dir, "Resources")).symlink_to(
-            "Versions/Current/Resources", target_is_directory=True
-        )
-        pathlib.Path(os.path.join(framework_dir, "onnxruntime")).symlink_to("Versions/Current/onnxruntime")
+        # https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Concepts/FrameworkAnatomy.html
+        # Versions/Current -> A
+        versions_dir = os.path.join(framework_dir, "Versions")
+        os.chdir(versions_dir)
+        pathlib.Path(os.path.join("Current")).symlink_to("A", target_is_directory=True)
 
+        # onnxruntime -> Versions/Current/onnxruntime
+        os.chdir(framework_dir)
+        pathlib.Path("onnxruntime").symlink_to("Versions/Current/onnxruntime")
+
+        # Resources -> /Versions/Current/Resources
+        pathlib.Path("Resources").symlink_to("Versions/Current/Resources")
     else:
         shutil.copy(info_plist_path, framework_dir)
         shutil.copy(framework_info_path, os.path.dirname(framework_dir))
