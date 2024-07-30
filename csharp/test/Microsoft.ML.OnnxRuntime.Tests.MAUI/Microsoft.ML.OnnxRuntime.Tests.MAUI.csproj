@@ -5,6 +5,7 @@
 		<IsIOSBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">true</IsIOSBuild>
 		<IsMacCatalystBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">true</IsMacCatalystBuild>
 		<OnnxRuntimeRoot>$(ProjectDir)..\..\..</OnnxRuntimeRoot>
+		<PrebuiltRuntimesDir>$(OnnxRuntimeRoot)\build\microsoft.ml.onnxruntime.1.18.1\runtimes</PrebuiltRuntimesDir>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -58,9 +59,21 @@
 	<!-- set to the default directories that a build would create. adjust for local testing as needed. -->
 	<PropertyGroup Condition="'$(IsWindowsBuild)' == 'true'">
 		<NativeBuildOutputDir>$(OnnxRuntimeRoot)\build\Windows\$(Configuration)\$(Configuration)</NativeBuildOutputDir>
+		<!-- TODO: support other architectures if needed. -->
+		<PrebuiltDir>$(PrebuiltRuntimesDir)\win-x64\native</PrebuiltDir>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(IsAndroidBuild)' == 'true'">
 		<NativeBuildOutputDir>$(OnnxRuntimeRoot)\build\Android\$(Configuration)</NativeBuildOutputDir>
+		<PrebuiltAAR>$(PrebuiltRuntimesDir)\android\native\onnxruntime.aar</PrebuiltAAR>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(IsIOSBuild)' == 'true'">
+		<Platform Condition=" '$(Platform)' == '' ">iPhoneSimulator</Platform>
+		<NativeBuildOutputDir>$(OnnxRuntimeRoot)\build\iOS\$(Configuration)\$(Configuration)-$(Platform)</NativeBuildOutputDir>
+		<PrebuiltFramework>$(PrebuiltRuntimesDir)\ios\native\onnxruntime.xcframework</PrebuiltFramework>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(IsMacCatalystBuild)' == 'true'">
+		<NativeBuildOutputDir>$(OnnxRuntimeRoot)\build\MacOS\$(Configuration)</NativeBuildOutputDir>
+		<PrebuiltFramework>$(PrebuiltRuntimesDir)\ios\native\onnxruntime.xcframework</PrebuiltFramework>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -81,16 +94,6 @@
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
-	<!-- TBD if this is required. Seems to break Package.appxmanifest processing though
-	<ItemGroup>
-		<None Include="Platforms\**" />
-		<Compile Remove="Platforms\**" />
-		<Compile Include="Platforms\Android\**" Condition="'$(IsAndroidBuild)' == 'true'" />
-		<Compile Include="Platforms\iOS\**" Condition="'$(IsIOSBuild)' == 'true'" />
-		<Compile Include="Platforms\MacCatalyst\**" Condition="'$(IsMacCatalystBuild)' == 'true'" />
-		<Compile Include="Platforms\Windows\**" Condition="'$(IsWindowsBuild)' == 'true'" />
-	</ItemGroup>
-	-->
 	<ItemGroup>
 		<Compile Include="..\Microsoft.ML.OnnxRuntime.Tests.Common\InferenceTest.cs">
 			<Link>InferenceTest.cs</Link>
@@ -112,50 +115,19 @@
 						  name="Microsoft.ML.OnnxRuntime.Tests.Devices" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(IsAndroidBuild)' == 'true'">
-		<!-- Setup EITHER a local build or put and AAR in the AndroidAAR directory and update the filename below. -->
+	<!--
+	Use a released Microsoft.ML.OnnxRuntime nuget package or a recent build from
+	https://aiinfra.visualstudio.com/PublicPackages/_artifacts/feed/ORT-Nightly if testing C# changes.
+	These contain the Windows, Android and iOS native binaries.
 
-		<!-- local build -->
-		<AndroidNativeLibrary Condition="Exists('$(NativeBuildOutputDir)\libonnxruntime.so')"
-							  Include="$(NativeBuildOutputDir)\libonnxruntime.so">
-			<Link>libs\libonnxruntime.so</Link>
-		</AndroidNativeLibrary>
+	Unzip the nupkg file in the /build directory to create /build/microsoft.ml.onnxruntime.1.18.1 directory.
+	Adjust the version number in PrebuiltRuntimesDir as needed.
 
-		<!--
-		Use a released AAR from https://mvnrepository.com/artifact/com.microsoft.onnxruntime/onnxruntime-android
-		unless testing changes that require the latest ORT code.
-		If the changes are checked in you can get the AAR from the Microsoft.ML.OnnxRuntime Nuget package on
-		https://aiinfra.visualstudio.com/PublicPackages/_artifacts/feed/ORT-Nightly
-
-		If you're testing changes on a branch an AAR can be created using \tools\ci_build\github\android\build_aar_package.py
-		or by running just the Android_Java_API_AAR_Packaging_Full stage of the Zip-Nuget-Java-Nodejs Packaging Pipeline CI
-		using the branch and downloading the artifact it publishes.
-		-->
-		<AndroidLibrary
-			Bind="false"
-			Condition="Exists('$(OnnxRuntimeRoot)\build\AndroidAAR\onnxruntime-android-1.17.3.aar')"
-			Include="$(OnnxRuntimeRoot)\build\AndroidAAR\onnxruntime-android-1.17.3.aar"/>
-		<!--
-		<AndroidNativeLibrary Condition="Exists('$(OnnxRuntimeRoot)\AndroidAAR\jni\arm64-v8a\libonnxruntime.so')"
-								Include="$(OnnxRuntimeRoot)\AndroidAAR\jni\arm64-v8a\libonnxruntime.so">
-			<Link>libs\arm64-v8a\libonnxruntime.so</Link>
-		</AndroidNativeLibrary>
-		<AndroidNativeLibrary Condition="Exists('$(OnnxRuntimeRoot)\AndroidAAR\jni\armeabi-v7a\libonnxruntime.so')"
-								Include="$(OnnxRuntimeRoot)\AndroidAAR\jni\armeabi-v7a\libonnxruntime.so">
-			<Link>libs\armeabi-v7a\libonnxruntime.so</Link>
-		</AndroidNativeLibrary>
-		<AndroidNativeLibrary Condition="Exists('$(OnnxRuntimeRoot)\AndroidAAR\jni\x86_64\libonnxruntime.so')"
-								Include="$(OnnxRuntimeRoot)\AndroidAAR\jni\x86_64\libonnxruntime.so">
-			<Link>libs\x86_64\libonnxruntime.so</Link>
-		</AndroidNativeLibrary>
-		<AndroidNativeLibrary Condition="Exists('$(OnnxRuntimeRoot)\AndroidAAR\jni\x86\libonnxruntime.so')"
-								Include="$(OnnxRuntimeRoot)\AndroidAAR\jni\x86\libonnxruntime.so">
-			<Link>libs\x86\libonnxruntime.so</Link>
-		</AndroidNativeLibrary>
-		-->
-	</ItemGroup>
-
+	If testing changes to the native library, build locally and adjust the build path if needed.
+	Build paths assume no manual override of the default build output directory.
+	-->
 	<ItemGroup Condition="'$(IsWindowsBuild)'=='true'">
+		<!-- local build -->
 		<None Include="$(NativeBuildOutputDir)\onnxruntime.dll;
 				$(NativeBuildOutputDir)\onnxruntime.pdb;
 				$(NativeBuildOutputDir)\onnxruntime_providers_*.dll;
@@ -165,6 +137,14 @@
 			<Visible>true</Visible>
 		</None>
 
+		<!-- prebuilt -->
+		<None Condition="!Exists('$(NativeBuildOutputDir)\onnxruntime.dll')"
+			  Include="$(PrebuiltDir)\*.*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Visible>true</Visible>
+		</None>
+
+		<!-- test data -->
 		<None Include="$(OnnxRuntimeRoot)\onnxruntime\test\testdata\*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Visible>false</Visible>
@@ -181,18 +161,84 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Visible>false</Visible>
 		</None>
-	    <!-- <BuildEnvVars Include="OnnxRuntimeBuildDirectory=$(OnnxRuntimeBuildDirectory)" /> -->
 	</ItemGroup>
 
-	<!-- Property debug output - makes finding/fixing any issues with the the conditions easy. -->
+	<ItemGroup Condition="'$(IsAndroidBuild)' == 'true'">
+		<!-- local build -->
+		<AndroidNativeLibrary Condition="Exists('$(NativeBuildOutputDir)\libonnxruntime.so')"
+							  Include="$(NativeBuildOutputDir)\libonnxruntime.so">
+			<Link>libs\libonnxruntime.so</Link>
+		</AndroidNativeLibrary>
+
+		<!-- build from package -->
+		<AndroidLibrary
+			Bind="false"
+			Condition="Exists('$(PrebuiltAAR)') AND !Exists('$(NativeBuildOutputDir)\libonnxruntime.so')"
+			Include="$(PrebuiltAAR)"/>
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(IsIOSBuild)' == 'true'">
+		<!-- local build of shared lib -->
+		<NativeReference
+			Condition="Exists('$(NativeBuildOutputDir)\libonnxruntime.dylib')"
+			Include="$(NativeBuildOutputDir)\libonnxruntime.dylib">
+			<Link>libs\libonnxruntime.dylib</Link>
+			<Kind>Dynamic</Kind>
+			<ForceLoad>True</ForceLoad>
+			<IsCxx>True</IsCxx>
+		</NativeReference>
+
+		<!-- build from package -->
+		<NativeReference
+			Condition="Exists('$(PrebuiltFramework)') AND !Exists('$(NativeBuildOutputDir)\libonnxruntime.dylib')"
+			Include="$(PrebuiltFramework)">
+			<Kind>Framework</Kind>
+			<ForceLoad>True</ForceLoad>
+			<IsCxx>True</IsCxx>
+		</NativeReference>
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(IsMacCatalystBuild)' == 'true'">
+		<!-- local build -->
+		<NativeReference Condition="Exists('$(NativeBuildOutputDir)\libonnxruntime.dylib')"
+						 Include="$(NativeBuildOutputDir)\libonnxruntime.dylib">
+			<Link>libs\libonnxruntime.dylib</Link>
+			<Kind>Dynamic</Kind>
+			<ForceLoad>True</ForceLoad>
+			<IsCxx>True</IsCxx>
+		</NativeReference>
+
+		<!-- build from package -->
+		<NativeReference
+			Condition="Exists('$(PrebuiltFramework)') AND !Exists('$(NativeBuildOutputDir)\libonnxruntime.dylib')"
+			Include="$(PrebuiltFramework)">
+			<Kind>Framework</Kind>
+			<ForceLoad>True</ForceLoad>
+			<IsCxx>True</IsCxx>
+		</NativeReference>
+	</ItemGroup>
+
+	<!--
+	Property debug output - makes finding/fixing any issues with the the conditions easy.
+	Current checks are for local builds
+	-->
 	<PropertyGroup>
+		<!-- local builds-->
 		<HaveOrtDll>false</HaveOrtDll>
 		<HaveOrtDll Condition="Exists('$(NativeBuildOutputDir)\onnxruntime.dll')">true</HaveOrtDll>
 		<HaveOrtSo>false</HaveOrtSo>
 		<HaveOrtSo Condition="Exists('$(NativeBuildOutputDir)\libonnxruntime.so')">true</HaveOrtSo>
-		<HaveOrtAAR>false</HaveOrtAAR>
-		<HaveOrtAAR Condition="Exists('$(OnnxRuntimeRoot)\build\AndroidAAR\onnxruntime-android-1.17.3.aar')">true</HaveOrtAAR>
+		<HaveOrtDylib>false</HaveOrtDylib>
+		<HaveOrtDylib Condition="Exists('$(NativeBuildOutputDir)\libonnxruntime.dylib')">true</HaveOrtDylib>
+		<!-- prebuilt -->
+		<HavePrebuilt>false</HavePrebuilt>
+		<HavePrebuilt Condition="Exists('$(PrebuiltDir)')">true</HavePrebuilt>
+		<HaveAAR>false</HaveAAR>
+		<HaveAAR Condition="Exists('$(PrebuiltAAR)')">true</HaveAAR>
+		<HaveFramework>false</HaveFramework>
+		<HaveFramework Condition="Exists('$(PrebuiltFramework)')">true</HaveFramework>
 	</PropertyGroup>
+
 	<Target Name="DumpValues" BeforeTargets="PreBuildEvent">
 		<Message Text="IsWindowsBuild='$(IsWindowsBuild)'" />
 		<Message Text="IsAndroidBuild='$(IsAndroidBuild)'" />
@@ -201,8 +247,11 @@
 		<Message Text="OnnxRuntimeRoot=$(OnnxRuntimeRoot)" />
 		<Message Text="NativeBuildOutputDir=$(NativeBuildOutputDir)" />
 		<Message Text="onnxruntime.dll from local build=$(HaveOrtDll)" />
-		<Message Text="onnxruntime.so from local build=$(HaveOrtSo)" />
-		<Message Text="AAR from AndroidAAR=$(HaveOrtAAR)"/>
+		<Message Text="libonnxruntime.so from local build=$(HaveOrtSo)" />
+		<Message Text="libonnxruntime.dylib from local build=$(HaveOrtDylib)" />
+		<Message Text="Prebuilt runtime=$(HavePrebuilt)" />
+		<Message Text="Prebuilt AAR=$(HaveAAR)" />
+		<Message Text="Prebuilt xcframework=$(HaveFramework)" />
 	</Target>
 
 	<ItemGroup>
