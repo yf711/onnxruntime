@@ -25,6 +25,9 @@ PODSPEC_BASENAME="${POD_NAME}.podspec"
 
 pushd "${BINARIES_STAGING_DIR}/${POD_NAME}"
 
+ls -lR .
+zip --help
+
 # assemble the files in the artifacts staging directory
 zip -r -y "${ARTIFACTS_STAGING_DIR}/${POD_ARCHIVE_BASENAME}" ./* --exclude "${PODSPEC_BASENAME}"
 cp "${PODSPEC_BASENAME}" "${ARTIFACTS_STAGING_DIR}/${PODSPEC_BASENAME}"
