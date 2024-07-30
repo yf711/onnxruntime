@@ -8,10 +8,9 @@ namespace Microsoft.ML.OnnxRuntime.Tests.MAUI
         [Fact(DisplayName = "CPU_EP_NoArena")]
         public void TestEnableCpuEPWithNoArena()
         {
-            //var opt = new SessionOptions();
-            //int useArena = 0;
-            //opt.AppendExecutionProvider_CPU(useArena);
-            Assert.True(false);
+            var opt = new SessionOptions();
+            int useArena = 0;
+            opt.AppendExecutionProvider_CPU(useArena);
         }
     }
 }

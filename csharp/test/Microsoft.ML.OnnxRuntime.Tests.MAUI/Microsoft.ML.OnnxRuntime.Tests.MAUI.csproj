@@ -4,6 +4,7 @@
 		<IsAndroidBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">true</IsAndroidBuild>
 		<IsIOSBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">true</IsIOSBuild>
 		<IsMacCatalystBuild Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">true</IsMacCatalystBuild>
+		<OnnxRuntimeRoot>$(ProjectDir)..\..\..</OnnxRuntimeRoot>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -50,6 +51,16 @@
 		<AssemblyOriginatorKeyFile>..\..\OnnxRuntime.snk</AssemblyOriginatorKeyFile>
 		<!-- <DefaultLanguage>en-us</DefaultLanguage> -->
 
+		<!-- Multiple csproj files copy the ORT dll and pdb files. -->
+		<ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+	</PropertyGroup>
+
+	<!-- set to the default directories that a build would create. adjust for local testing as needed. -->
+	<PropertyGroup Condition="'$(IsWindowsBuild)' == 'true'">
+		<NativeBuildOutputDir>$(OnnxRuntimeRoot)\build\Windows\$(Configuration)\$(Configuration)</NativeBuildOutputDir>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(IsAndroidBuild)' == 'true'">
+		<NativeBuildOutputDir>$(OnnxRuntimeRoot)\build\Android\$(Configuration)</NativeBuildOutputDir>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -80,7 +91,7 @@
 		<Compile Include="Platforms\Windows\**" Condition="'$(IsWindowsBuild)' == 'true'" />
 	</ItemGroup>
 	-->
-	<!-- <ItemGroup>
+	<ItemGroup>
 		<Compile Include="..\Microsoft.ML.OnnxRuntime.Tests.Common\InferenceTest.cs">
 			<Link>InferenceTest.cs</Link>
 		</Compile>
@@ -91,7 +102,7 @@
 			<Link>TensorTests.cs</Link>
 		</Compile>
 	</ItemGroup>
-	-->
+
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\Microsoft.ML.OnnxRuntime\Microsoft.ML.OnnxRuntime.csproj"
 						  name="Microsoft.ML.OnnxRuntime" />
@@ -101,41 +112,98 @@
 						  name="Microsoft.ML.OnnxRuntime.Tests.Devices" />
 	</ItemGroup>
 
- 	<!-- <PropertyGroup Condition="'$(IsWindowsBuild)'=='trueXXX'">
-		<OnnxRuntimeCsharpRoot>$(ProjectDir)..\..</OnnxRuntimeCsharpRoot>
-		<OnnxRuntimeBuildDirectory Condition="'$(OnnxRuntimeBuildDirectory)'==''">$(OnnxRuntimeCsharpRoot)\..\build\Windows</OnnxRuntimeBuildDirectory>
-		<NativeBuildOutputDir>$(OnnxRuntimeBuildDirectory)\$(Configuration)\$(Configuration)</NativeBuildOutputDir>
-	</PropertyGroup>
+	<ItemGroup Condition="'$(IsAndroidBuild)' == 'true'">
+		<!-- Setup EITHER a local build or put and AAR in the AndroidAAR directory and update the filename below. -->
 
-	<ItemGroup Condition="'$(IsWindowsBuild)'=='trueXXX'">
+		<!-- local build -->
+		<AndroidNativeLibrary Condition="Exists('$(NativeBuildOutputDir)\libonnxruntime.so')"
+							  Include="$(NativeBuildOutputDir)\libonnxruntime.so">
+			<Link>libs\libonnxruntime.so</Link>
+		</AndroidNativeLibrary>
+
+		<!--
+		Use a released AAR from https://mvnrepository.com/artifact/com.microsoft.onnxruntime/onnxruntime-android
+		unless testing changes that require the latest ORT code.
+		If the changes are checked in you can get the AAR from the Microsoft.ML.OnnxRuntime Nuget package on
+		https://aiinfra.visualstudio.com/PublicPackages/_artifacts/feed/ORT-Nightly
+
+		If you're testing changes on a branch an AAR can be created using \tools\ci_build\github\android\build_aar_package.py
+		or by running just the Android_Java_API_AAR_Packaging_Full stage of the Zip-Nuget-Java-Nodejs Packaging Pipeline CI
+		using the branch and downloading the artifact it publishes.
+		-->
+		<AndroidLibrary
+			Bind="false"
+			Condition="Exists('$(OnnxRuntimeRoot)\build\AndroidAAR\onnxruntime-android-1.17.3.aar')"
+			Include="$(OnnxRuntimeRoot)\build\AndroidAAR\onnxruntime-android-1.17.3.aar"/>
+		<!--
+		<AndroidNativeLibrary Condition="Exists('$(OnnxRuntimeRoot)\AndroidAAR\jni\arm64-v8a\libonnxruntime.so')"
+								Include="$(OnnxRuntimeRoot)\AndroidAAR\jni\arm64-v8a\libonnxruntime.so">
+			<Link>libs\arm64-v8a\libonnxruntime.so</Link>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Condition="Exists('$(OnnxRuntimeRoot)\AndroidAAR\jni\armeabi-v7a\libonnxruntime.so')"
+								Include="$(OnnxRuntimeRoot)\AndroidAAR\jni\armeabi-v7a\libonnxruntime.so">
+			<Link>libs\armeabi-v7a\libonnxruntime.so</Link>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Condition="Exists('$(OnnxRuntimeRoot)\AndroidAAR\jni\x86_64\libonnxruntime.so')"
+								Include="$(OnnxRuntimeRoot)\AndroidAAR\jni\x86_64\libonnxruntime.so">
+			<Link>libs\x86_64\libonnxruntime.so</Link>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Condition="Exists('$(OnnxRuntimeRoot)\AndroidAAR\jni\x86\libonnxruntime.so')"
+								Include="$(OnnxRuntimeRoot)\AndroidAAR\jni\x86\libonnxruntime.so">
+			<Link>libs\x86\libonnxruntime.so</Link>
+		</AndroidNativeLibrary>
+		-->
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(IsWindowsBuild)'=='true'">
 		<None Include="$(NativeBuildOutputDir)\onnxruntime.dll;
 				$(NativeBuildOutputDir)\onnxruntime.pdb;
 				$(NativeBuildOutputDir)\onnxruntime_providers_*.dll;
 				$(NativeBuildOutputDir)\onnxruntime_providers_*.pdb;
 				$(NativeBuildOutputDir)\custom_op_library*.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<Visible>false</Visible>
+			<Visible>true</Visible>
 		</None>
 
-		<None Include="$(OnnxRuntimeCSharpRoot)\testdata\*">
+		<None Include="$(OnnxRuntimeRoot)\onnxruntime\test\testdata\*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Visible>false</Visible>
 			</None>
-			<None Include="$(OnnxRuntimeCSharpRoot)\..\onnxruntime\test\testdata\overridable_initializer.onnx">
+			<None Include="$(OnnxRuntimeRoot)\onnxruntime\test\testdata\overridable_initializer.onnx">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Visible>false</Visible>
 		</None>
-		<None Include="$(OnnxRuntimeCSharpRoot)\..\onnxruntime\test\testdata\capi_symbolic_dims.onnx">
+		<None Include="$(OnnxRuntimeRoot)\onnxruntime\test\testdata\capi_symbolic_dims.onnx">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Visible>false</Visible>
 		</None>
-		<None Include="$(OnnxRuntimeCSharpRoot)\..\onnxruntime\test\testdata\custom_op_library\custom_op_test.onnx">
+		<None Include="$(OnnxRuntimeRoot)\onnxruntime\test\testdata\custom_op_library\custom_op_test.onnx">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Visible>false</Visible>
 		</None>
-	    <!- <BuildEnvVars Include="OnnxRuntimeBuildDirectory=$(OnnxRuntimeBuildDirectory)" /> ->
-	</ItemGroup> -->
+	    <!-- <BuildEnvVars Include="OnnxRuntimeBuildDirectory=$(OnnxRuntimeBuildDirectory)" /> -->
+	</ItemGroup>
 
+	<!-- Property debug output - makes finding/fixing any issues with the the conditions easy. -->
+	<PropertyGroup>
+		<HaveOrtDll>false</HaveOrtDll>
+		<HaveOrtDll Condition="Exists('$(NativeBuildOutputDir)\onnxruntime.dll')">true</HaveOrtDll>
+		<HaveOrtSo>false</HaveOrtSo>
+		<HaveOrtSo Condition="Exists('$(NativeBuildOutputDir)\libonnxruntime.so')">true</HaveOrtSo>
+		<HaveOrtAAR>false</HaveOrtAAR>
+		<HaveOrtAAR Condition="Exists('$(OnnxRuntimeRoot)\build\AndroidAAR\onnxruntime-android-1.17.3.aar')">true</HaveOrtAAR>
+	</PropertyGroup>
+	<Target Name="DumpValues" BeforeTargets="PreBuildEvent">
+		<Message Text="IsWindowsBuild='$(IsWindowsBuild)'" />
+		<Message Text="IsAndroidBuild='$(IsAndroidBuild)'" />
+		<Message Text="IsIOSBuild='$(IsIOSBuild)'" />
+		<Message Text="IsMacCatalystBuild='$(IsMacCatalystBuild)'" />
+		<Message Text="OnnxRuntimeRoot=$(OnnxRuntimeRoot)" />
+		<Message Text="NativeBuildOutputDir=$(NativeBuildOutputDir)" />
+		<Message Text="onnxruntime.dll from local build=$(HaveOrtDll)" />
+		<Message Text="onnxruntime.so from local build=$(HaveOrtSo)" />
+		<Message Text="AAR from AndroidAAR=$(HaveOrtAAR)"/>
+	</Target>
 
 	<ItemGroup>
 		<PackageReference Include="DeviceRunners.VisualRunners.Maui" Version="0.1.0-preview.2" />
