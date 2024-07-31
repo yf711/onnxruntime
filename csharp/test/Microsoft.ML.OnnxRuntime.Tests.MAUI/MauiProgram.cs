@@ -16,16 +16,21 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
+        var unitTestAssemblies = new List<System.Reflection.Assembly>
+        {
+            typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.PlatformTests).Assembly,
+            typeof(Microsoft.ML.OnnxRuntime.Tests.InferenceTest).Assembly,
+            typeof(Microsoft.ML.OnnxRuntime.Tests.OrtIoBindingAllocationTests).Assembly,
+            typeof(Microsoft.ML.OnnxRuntime.Tensors.Tests.TensorTests).Assembly
+        };
+
         var builder = MauiApp.CreateBuilder();
         builder
             // .ConfigureUITesting()
 #if MODE_XHARNESS
             .UseXHarnessTestRunner(conf => conf
                 .AddTestAssembly(typeof(MauiProgram).Assembly)
-                //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.PlatformTests).Assembly)
-                //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.InferenceTest).Assembly)
-                //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.OrtIoBindingAllocationTests).Assembly)
-                //.AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tensors.Tests.TensorTests).Assembly)
+                .AddTestAssemblies(unitTestAssemblies)
                 .AddXunit())
 #endif
             .UseVisualTestRunner(conf => conf
@@ -41,12 +46,7 @@ public static class MauiProgram
 //#endif
                 .AddConsoleResultChannel()
                 .AddTestAssembly(typeof(MauiProgram).Assembly)
-// #if WINDOWS
-                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.MAUI.PlatformTests).Assembly)
-// #endif
-                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.InferenceTest).Assembly)
-                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tests.OrtIoBindingAllocationTests).Assembly)
-                .AddTestAssemblies(typeof(Microsoft.ML.OnnxRuntime.Tensors.Tests.TensorTests).Assembly)
+                .AddTestAssemblies(unitTestAssemblies)
                 .AddXunit());
 
 #if DEBUG
