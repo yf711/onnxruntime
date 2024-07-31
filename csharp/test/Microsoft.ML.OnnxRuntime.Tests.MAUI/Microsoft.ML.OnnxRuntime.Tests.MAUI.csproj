@@ -27,7 +27,7 @@
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-		<!-- TODO: Do we need to set the CI property in the CI yaml or is it automatic? -->
+		<!-- These are copied from the sample. TBD what we really need. -->
 		<DefineConstants Condition="'$(CI)' != 'true'">$(DefineConstants);INCLUDE_FAILING_TESTS</DefineConstants>
 		<DefineConstants Condition="'$(TestingMode)' == 'NonInteractiveVisual'">$(DefineConstants);MODE_NON_INTERACTIVE_VISUAL</DefineConstants>
 		<DefineConstants Condition="'$(TestingMode)' == 'XHarness'">$(DefineConstants);MODE_XHARNESS</DefineConstants>
@@ -50,7 +50,6 @@
 
 		<SignAssembly>true</SignAssembly>
 		<AssemblyOriginatorKeyFile>..\..\OnnxRuntime.snk</AssemblyOriginatorKeyFile>
-		<!-- <DefaultLanguage>en-us</DefaultLanguage> -->
 
 		<!-- Multiple csproj files copy the ORT dll and pdb files. -->
 		<ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
@@ -60,16 +59,16 @@
 	<PropertyGroup Condition="'$(IsWindowsBuild)' == 'true'">
 		<NativeBuildOutputDir>$(OnnxRuntimeRoot)\build\Windows\$(Configuration)\$(Configuration)</NativeBuildOutputDir>
 		<!-- TODO: support other architectures if needed. -->
-		<PrebuiltDir>$(PrebuiltRuntimesDir)\win-x64\native</PrebuiltDir>
+		<PrebuiltWinDir>$(PrebuiltRuntimesDir)\win-x64\native</PrebuiltWinDir>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(IsAndroidBuild)' == 'true'">
 		<NativeBuildOutputDir>$(OnnxRuntimeRoot)\build\Android\$(Configuration)</NativeBuildOutputDir>
 		<PrebuiltAAR>$(PrebuiltRuntimesDir)\android\native\onnxruntime.aar</PrebuiltAAR>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(IsIOSBuild)' == 'true'">
-		<!-- TODO: should be able to detect whether it's a simulator build or not automatically? -->
 		<Platform Condition=" '$(Platform)' == '' ">iPhoneSimulator</Platform>
-		<NativeBuildOutputDir>$(OnnxRuntimeRoot)\build\iOS\$(Configuration)\$(Configuration)-$(Platform)</NativeBuildOutputDir>
+		<PlatformLower>$(Platform.ToLower())</PlatformLower>
+		<NativeBuildOutputDir>$(OnnxRuntimeRoot)\build\iOS\$(Configuration)\$(Configuration)-$(PlatformLower)</NativeBuildOutputDir>
 		<PrebuiltFramework>$(PrebuiltRuntimesDir)\ios\native\onnxruntime.xcframework</PrebuiltFramework>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(IsMacCatalystBuild)' == 'true'">
@@ -140,7 +139,7 @@
 
 		<!-- prebuilt -->
 		<None Condition="!Exists('$(NativeBuildOutputDir)\onnxruntime.dll')"
-			  Include="$(PrebuiltDir)\*.*">
+			  Include="$(PrebuiltWinDir)\*.*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Visible>true</Visible>
 		</None>
@@ -233,7 +232,7 @@
 		<HaveOrtDylib Condition="Exists('$(NativeBuildOutputDir)\libonnxruntime.dylib')">true</HaveOrtDylib>
 		<!-- prebuilt -->
 		<HavePrebuilt>false</HavePrebuilt>
-		<HavePrebuilt Condition="Exists('$(PrebuiltDir)')">true</HavePrebuilt>
+		<HavePrebuilt Condition="Exists('$(PrebuiltWinDir)')">true</HavePrebuilt>
 		<HaveAAR>false</HaveAAR>
 		<HaveAAR Condition="Exists('$(PrebuiltAAR)')">true</HaveAAR>
 		<HaveFramework>false</HaveFramework>
@@ -266,10 +265,6 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
 		<PackageReference Include="xunit" Version="2.9.0" />
 		<PackageReference Include="xunit.runner.utility" Version="2.9.0" />
-		<!-- <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference> -->
 	</ItemGroup>
 
 	<Target Name="RemoveVisualStudioTestRunner" BeforeTargets="_ComputeAppxPackagePayload">
