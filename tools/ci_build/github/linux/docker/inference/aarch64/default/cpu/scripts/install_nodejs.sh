@@ -40,6 +40,7 @@ cd /tmp/src
 
 echo "Installing Node.js"
 
+CPU_ARCH=$(uname -m)
 if [[ "$CPU_ARCH" = "x86_64" ]]; then
   NODEJS_ARCH=x64
 elif [[ "$CPU_ARCH" = "aarch64" ]]; then
