@@ -115,6 +115,8 @@ def main():
             "-f",
             args.dockerfile,
             args.context,
+            capture_stdout=True,
+            capture_stderr=True,
         )
     elif args.use_imagecache:
         log.info("Building image with pipeline cache...")
@@ -147,6 +149,8 @@ def main():
             "--file",
             args.dockerfile,
             args.context,
+            capture_stdout=True,
+            capture_stderr=True,
         )
 
     # tag so we can refer to the image by repository name
