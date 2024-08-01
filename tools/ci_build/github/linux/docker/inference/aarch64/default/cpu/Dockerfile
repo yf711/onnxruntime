@@ -5,15 +5,14 @@
 ARG BASEIMAGE=arm64v8/almalinux:8
 FROM $BASEIMAGE
 
-ENV PATH /opt/rh/gcc-toolset-12/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ENV LANG en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
+ENV PATH=/opt/rh/gcc-toolset-12/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
 
 ADD scripts /tmp/scripts
 # make mulitple layers to avoid cache invalidation and install_nodejs.sh doesn't depend on install_centos.sh
 RUN cd /tmp/scripts && /tmp/scripts/install_nodejs.sh
 RUN cd /tmp/scripts && /tmp/scripts/install_centos.sh && /tmp/scripts/install_deps.sh
-RUN rm -rf /tmp/scripts
 
 ARG BUILD_UID=1001
 ARG BUILD_USER=onnxruntimedev
