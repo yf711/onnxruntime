@@ -108,6 +108,7 @@ def main():
             "--tag",
             full_image_name,
             "--cache-from=type=registry,ref=" + full_image_name,
+            "--cache-to type=inline",
             "--build-arg",
             "BUILDKIT_INLINE_CACHE=1",
             *shlex.split(args.docker_build_args),
