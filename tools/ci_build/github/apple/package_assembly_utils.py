@@ -130,7 +130,7 @@ def get_framework_values(framework_info):
     macos_deployment_target = ""
     weak_framework = ""  # should be the same for all platforms
     # get info, allowing for a subset of platforms to be specified
-    for framework in ("iphonesimulator", "iphoneos", "macos"):
+    for framework in ("iphonesimulator", "iphoneos", "macosx"):
         if framework not in framework_info:
             continue
 
@@ -143,7 +143,7 @@ def get_framework_values(framework_info):
             # should be consistent
             assert(weak == weak_framework)
 
-        if framework == "macos":
+        if framework == "macosx":
             macos_deployment_target = target
         else:
             if not ios_deployment_target:
