@@ -50,8 +50,6 @@ def _test_apple_packages(args):
     with contextlib.ExitStack() as context_stack:
         if args.test_project_stage_dir is None:
             stage_dir = pathlib.Path(context_stack.enter_context(tempfile.TemporaryDirectory())).resolve()
-            # stage_dir = pathlib.Path("/Users/scmckay/src/github/ort/build/apple_framework.testing")
-            # shutil.rmtree(stage_dir)
         else:
             # If we specify the stage dir, then use it to create test project
             stage_dir = args.test_project_stage_dir.resolve()
@@ -96,9 +94,7 @@ def _test_apple_packages(args):
         zip_file_path = local_pods_dir / f"{pod_name}.zip"
         print(f"Zipping to {zip_file_path}")
 
-        # make_archive doesn't preserve symlinks. we know this is running on macOS so use zip
-        # shutil.make_archive require target file as full path without extension
-        # shutil.make_archive(zip_file_path.with_suffix(""), "zip", root_dir=local_pods_dir)
+        # shutil.make_archive doesn't preserve symlinks. we know this is running on macOS so use zip
         subprocess.run(['zip', '-r', '-y', str(zip_file_path), "."], cwd=local_pods_dir, check=True)
 
         # update the podspec to point to the local framework zip file

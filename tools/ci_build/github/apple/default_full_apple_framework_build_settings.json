@@ -3,6 +3,10 @@
         "iphoneos": [
             "arm64"
         ],
+        "iphonesimulator": [
+            "arm64",
+            "x86_64"
+        ],
         "macosx": [
             "arm64",
             "x86_64"
