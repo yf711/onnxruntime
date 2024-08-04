@@ -57,7 +57,8 @@ def parse_args():
     )
 
     parser.add_argument("--test", action="store_true", help="Run tests on the framework and pod package files.")
-    parser.add_argument("--skip-build", action="store_true", help="Use existing build.")
+    parser.add_argument("--skip-build", action="store_true",
+                        help="Use build from previous run. Useful to debug test issues or packaging changes.")
 
     build_framework_group = parser.add_argument_group(
         title="iOS framework build arguments",
