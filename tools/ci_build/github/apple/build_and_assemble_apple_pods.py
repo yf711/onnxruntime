@@ -57,8 +57,11 @@ def parse_args():
     )
 
     parser.add_argument("--test", action="store_true", help="Run tests on the framework and pod package files.")
-    parser.add_argument("--skip-build", action="store_true",
-                        help="Use build from previous run. Useful to debug test issues or packaging changes.")
+    parser.add_argument(
+        "--skip-build",
+        action="store_true",
+        help="Use build from previous run. Useful to debug test issues or packaging changes.",
+    )
 
     build_framework_group = parser.add_argument_group(
         title="iOS framework build arguments",
@@ -154,7 +157,6 @@ def main():
         print("DEBUG: C/C++ pod from assemble_c_pod_package")
         run(["ls", "-lR", str(c_pod_staging_dir)])
 
-
         if args.test:
             test_c_pod_args = ["pod", "lib", "lint", "--verbose"]
 
@@ -181,13 +183,11 @@ def main():
             shutil.copytree(src, dst, symlinks=True)
             shutil.rmtree(src)
 
-
         move_dir(c_pod_staging_dir, staging_dir / c_pod_name)
         move_dir(objc_pod_staging_dir, staging_dir / objc_pod_name)
 
         print("DEBUG: C/C++ pod post-move to staging dir")
         run(["ls", "-lR", str(staging_dir / c_pod_name)])
-
 
     log.info(f"Successfully assembled iOS pods at '{staging_dir}'.")
 

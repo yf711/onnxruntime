@@ -17,8 +17,8 @@ from package_assembly_utils import (  # noqa: E402
     copy_repo_relative_to_dir,
     filter_files,
     gen_file_from_template,
+    get_podspec_values,
     load_json_config,
-    get_framework_values,
 )
 
 # these variables contain paths or path patterns that are relative to the repo root
@@ -148,7 +148,7 @@ def assemble_objc_pod_package(
     def path_patterns_as_variable_value(patterns: list[str]):
         return ", ".join([f'"{pattern}"' for pattern in patterns])
 
-    (ios_deployment_target, macos_deployment_target, _) = get_framework_values(framework_info)
+    (ios_deployment_target, macos_deployment_target, _) = get_podspec_values(framework_info)
 
     variable_substitutions = {
         "C_POD_NAME": c_pod_config["name"],

@@ -88,14 +88,14 @@ def _test_apple_packages(args):
         podspec = shutil.move(podspec, target_proj_path / podspec.name)
 
         print("DEBUG: C/C++ pod for test")
-        subprocess.run(["ls", "-lR", str(local_pods_dir)])
+        subprocess.run(["ls", "-lR", str(local_pods_dir)], check=False)
 
         # create a zip file contains the framework
         zip_file_path = local_pods_dir / f"{pod_name}.zip"
         print(f"Zipping to {zip_file_path}")
 
         # shutil.make_archive doesn't preserve symlinks. we know this is running on macOS so use zip
-        subprocess.run(['zip', '-r', '-y', str(zip_file_path), "."], cwd=local_pods_dir, check=True)
+        subprocess.run(["zip", "-r", "-y", str(zip_file_path), "."], cwd=local_pods_dir, check=True)
 
         # update the podspec to point to the local framework zip file
         with open(podspec) as file:

@@ -16,8 +16,8 @@ from package_assembly_utils import (  # noqa: E402
     PackageVariant,
     copy_repo_relative_to_dir,
     gen_file_from_template,
+    get_podspec_values,
     load_json_config,
-    get_framework_values,
 )
 
 
@@ -71,7 +71,7 @@ def assemble_c_pod_package(
     shutil.copytree(public_headers_dir, staging_dir / public_headers_dir.name, dirs_exist_ok=True, symlinks=True)
     copy_repo_relative_to_dir(["LICENSE"], staging_dir)
 
-    (ios_deployment_target, macos_deployment_target, weak_framework) = get_framework_values(framework_info)
+    (ios_deployment_target, macos_deployment_target, weak_framework) = get_podspec_values(framework_info)
 
     # generate the podspec file from the template
     variable_substitutions = {

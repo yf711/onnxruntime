@@ -117,9 +117,10 @@ def load_json_config(json_config_file: pathlib.Path):
     with open(json_config_file) as config:
         return json.load(config)
 
-def get_framework_values(framework_info):
+
+def get_podspec_values(framework_info):
     """
-    Get the deployement targets and weak framework info from the dictionary that load_json_config returned.
+    Get the podspec deployement targets and weak framework info from the dictionary that load_json_config returned.
     Looks for iphonesimulator, iphoneos and macos settings.
     Handles missing platforms and checks consistency.
     Returns empty string for deployment target if that platofrm is not enabled.
@@ -141,7 +142,7 @@ def get_framework_values(framework_info):
             weak_framework = weak
         else:
             # should be consistent
-            assert(weak == weak_framework)
+            assert weak == weak_framework
 
         if framework == "macosx":
             macos_deployment_target = target
@@ -150,9 +151,10 @@ def get_framework_values(framework_info):
                 ios_deployment_target = target
             else:
                 # should be consistent
-                assert(ios_deployment_target == target)
+                assert ios_deployment_target == target
 
     return (ios_deployment_target, macos_deployment_target, weak_framework)
+
 
 def get_ort_version():
     """
