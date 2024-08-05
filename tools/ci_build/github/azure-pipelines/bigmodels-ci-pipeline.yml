@@ -319,7 +319,6 @@ stages:
         --build-arg BUILD_UID=$( id -u )
         --build-arg BASEIMAGE=${{ variables.docker_base_image }}
         --build-arg TRT_VERSION=${{ variables.linux_trt_version }}
-        --no-cache
         "
         Repository: onnxruntimeubi8packagestest_torch
         UpdateDepsTxt: false
