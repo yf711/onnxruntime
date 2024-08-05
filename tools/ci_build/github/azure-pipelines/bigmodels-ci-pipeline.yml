@@ -318,7 +318,7 @@ stages:
         DockerBuildArgs: "
         --build-arg BUILD_UID=$( id -u )
         "
-        Repository: onnxruntimeubi8packagestest_torch
+        Repository: onnxruntimeubi8packagestest_torch1
         UpdateDepsTxt: false
 
     - task: DownloadPackage@1
@@ -334,7 +334,7 @@ stages:
         docker run --rm --gpus all -v $(Build.SourcesDirectory):/workspace \
            -v $(Build.BinariesDirectory)/ort-artifact/:/ort-artifact \
            -v $(Agent.TempDirectory)/meta_llama2_7b_hf:/meta-llama2 \
-           onnxruntimeubi8packagestest_torch \
+           onnxruntimeubi8packagestest_torch1 \
             bash -c "
               set -ex; \
               pushd /workspace/onnxruntime/python/tools/transformers/ ; \
