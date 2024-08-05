@@ -108,7 +108,6 @@ def main():
             args.docker_path,
             "--log-level",
             "error",
-            "buildx",
             "build",
             "--push",
             "--tag",
