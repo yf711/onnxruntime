@@ -116,10 +116,15 @@ def main():
             *shlex.split(args.docker_build_args),
             "--tag",
             full_image_name,
-            "--push",
+            "--load",
             "-f",
             args.dockerfile,
             args.context,
+        )
+        run(
+            args.docker_path,
+            "push",
+            full_image_name,
         )
     elif args.use_imagecache:
         log.info("Building image with pipeline cache...")
@@ -155,7 +160,6 @@ def main():
         )
 
     # tag so we can refer to the image by repository name
-    run(args.docker_path, "pull", full_image_name)
     run(args.docker_path, "tag", full_image_name, args.repository)
 
     return 0
