@@ -324,7 +324,7 @@ stages:
         UpdateDepsTxt: false
 
     - script: |
-      df -h
+        df -h
 
     - task: DownloadPackage@1
       displayName: 'Download Meta Llama2 model'
