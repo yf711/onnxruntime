@@ -42,9 +42,6 @@ else \
     echo "TRT_VERSION is none skipping Tensor RT Installation" ; \
 fi
 
-ADD scripts /tmp/scripts
-RUN cd /tmp/scripts && /tmp/scripts/install_dotnet.sh && /tmp/scripts/install_java.sh && rm -rf /tmp/scripts
-
 RUN python3 -m pip uninstall -y torch
 RUN python3 -m pip install torch --index-url https://download.pytorch.org/whl/cu118
 
