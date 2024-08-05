@@ -323,6 +323,9 @@ stages:
         Repository: onnxruntimeubi8packagestest_torch
         UpdateDepsTxt: false
 
+    - script: |
+      df -h
+
     - task: DownloadPackage@1
       displayName: 'Download Meta Llama2 model'
       inputs:
