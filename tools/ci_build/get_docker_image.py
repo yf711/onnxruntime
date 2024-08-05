@@ -155,7 +155,7 @@ def main():
         )
 
     # tag so we can refer to the image by repository name
-    run(args.docker_path, "--pull", full_image_name)
+    run(args.docker_path, "pull", full_image_name)
     run(args.docker_path, "tag", full_image_name, args.repository)
 
     return 0
