@@ -70,6 +70,7 @@ steps:
             --container-registry onnxruntimebuildcache \
             --repository "${{ parameters.Repository }}"
         displayName: "Get ${{ parameters.Repository }} image for ${{ parameters.Dockerfile }}"
+        continueOnError: true
       ContainerRegistry: onnxruntimebuildcache
 - ${{ if eq(parameters.UseImageCacheContainerRegistry, false) }}:
   - task: Cache@2
@@ -118,6 +119,13 @@ steps:
       ls -lah ${{ parameters.IMAGE_CACHE_DIR }}
     displayName: Display docker dir
     condition: eq('${{ parameters.UsePipelineCache }}', 'true')
+
+- script: |
+    docker version
+    docker image ls
+    docker system df
+    df -h
+  displayName: Check Docker Images
 
 - ${{ if and(eq(parameters.UpdateDepsTxt, true), or(eq(variables['System.CollectionId'], 'f3ad12f2-e480-4533-baf2-635c95467d29'),eq(variables['System.CollectionId'], 'bc038106-a83b-4dab-9dd3-5a41bc58f34c'))) }}:
   - task: PythonScript@0
