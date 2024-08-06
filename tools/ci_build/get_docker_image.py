@@ -98,34 +98,50 @@ def main():
         )
 
     if use_container_registry:
-        run(args.docker_path,
-            "buildx",
-            "create",
-            "--driver=docker-container",
-            "--name=container_builder"
+        if args.no_cache:
+            # It's only used in A100 pool, which doesn't have enough space for docker cache
+            run(
+                args.docker_path,
+                "buildx",
+                "build",
+                "--no-cache",
+                "--pull",
+                *shlex.split(args.docker_build_args),
+                "--tag",
+                full_image_name,
+                "--file",
+                args.dockerfile,
+                args.context,
             )
-        run(
-            args.docker_path,
-            "--log-level",
-            "error",
-            "build",
-            "--cache-from=type=registry,ref=" + full_image_name,
-            "--cache-to=type=registry,mode=max,ref=" + full_image_name,
-            "--builder",
-            "container_builder",
-            *shlex.split(args.docker_build_args),
-            "--tag",
-            full_image_name,
-            "--load",
-            "-f",
-            args.dockerfile,
-            args.context,
-        )
-        run(
-            args.docker_path,
-            "push",
-            full_image_name,
-        )
+        else:
+            run(args.docker_path,
+                "buildx",
+                "create",
+                "--driver=docker-container",
+                "--name=container_builder"
+                )
+            run(
+                args.docker_path,
+                "--log-level",
+                "error",
+                "build",
+                "--cache-from=type=registry,ref=" + full_image_name,
+                "--cache-to=type=registry,mode=max,ref=" + full_image_name,
+                "--builder",
+                "container_builder",
+                *shlex.split(args.docker_build_args),
+                "--tag",
+                full_image_name,
+                "--load",
+                "-f",
+                args.dockerfile,
+                args.context,
+            )
+            run(
+                args.docker_path,
+                "push",
+                full_image_name,
+            )
     elif args.use_imagecache:
         log.info("Building image with pipeline cache...")
         run(
