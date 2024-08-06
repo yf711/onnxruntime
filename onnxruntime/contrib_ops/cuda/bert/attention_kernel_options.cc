@@ -9,6 +9,7 @@
 #include "core/providers/shared_library/provider_api.h"
 #include "core/platform/env_var_utils.h"
 #include "contrib_ops/cuda/bert/tensorrt_fused_multihead_attention/mha_runner.h"
+#include "contrib_ops/cuda/bert/cudnn_fmha/cudnn_flash_attention.h"
 
 using namespace onnxruntime::contrib::attention;
 
@@ -27,7 +28,11 @@ void AttentionKernelOptions::Initialize(int value, bool use_build_flag) {
     use_flash_attention_ = !ParseEnvironmentVariableWithDefault<bool>(kDisableFlashAttention, false);
     use_efficient_attention_ = !ParseEnvironmentVariableWithDefault<bool>(kDisableMemoryEfficientAttention, false);
     use_trt_fused_attention_ = !ParseEnvironmentVariableWithDefault<bool>(kDisableFusedSelfAttention, false);
-    use_cudnn_flash_attention_ = ParseEnvironmentVariableWithDefault<bool>(kEnableCudnnFlashAttention, false);
+
+    // Enable cuDNN flash attention by default only when it is stable (requires cuDNN version >= 9.3.0).
+    bool is_cudnn_stable = ::onnxruntime::cudnn_sdpa::is_stable();
+    use_cudnn_flash_attention_ = ParseEnvironmentVariableWithDefault<bool>(kEnableCudnnFlashAttention, is_cudnn_stable);
+
     use_unfused_ = true;
     use_trt_flash_attention_ = !ParseEnvironmentVariableWithDefault<bool>(kDisableTrtFlashAttention, false);
     use_trt_cross_attention_ = !ParseEnvironmentVariableWithDefault<bool>(kDisableFusedCrossAttention, false);
