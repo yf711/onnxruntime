@@ -297,7 +297,7 @@ std::shared_ptr<fe::graph::Graph> build_graph(GraphParams& params) {
       .set_uid(O_UID);
 
   if (!mha_graph->build(handle, {fe::HeurMode_t::A}).is_good()) {
-    ORT_THROW("Failed to build cuDNN graph for Flash Attention:", *mha_graph, "cudnn verison:", cudnnGetVersion());
+    ORT_THROW("Failed to build cuDNN graph for Flash Attention:", *mha_graph, "cudnn version:", cudnnGetVersion());
   }
 
   return mha_graph;

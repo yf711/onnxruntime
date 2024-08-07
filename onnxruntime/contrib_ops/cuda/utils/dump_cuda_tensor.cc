@@ -461,22 +461,22 @@ void CudaTensorConsoleDumper::Print(const char*, int, bool) const {
 void CudaTensorConsoleDumper::Print(const char*, const std::string&, bool) const {
 }
 
-void CudaTensorConsoleDumper::Print(const char* name, const int32_t* tensor, gsl::span<const int64_t>& dims) const {
+void CudaTensorConsoleDumper::Print(const char*, const int32_t*, gsl::span<const int64_t>&) const {
 }
 
-void CudaTensorConsoleDumper::Print(const char* name, const int64_t* tensor, gsl::span<const int64_t>& dims) const {
+void CudaTensorConsoleDumper::Print(const char*, const int64_t*, gsl::span<const int64_t>&) const {
 }
 
-void CudaTensorConsoleDumper::Print(const char* name, const float* tensor, gsl::span<const int64_t>& dims) const {
+void CudaTensorConsoleDumper::Print(const char*, const float*, gsl::span<const int64_t>&) const {
 }
 
-void CudaTensorConsoleDumper::Print(const char* name, const half* tensor, gsl::span<const int64_t>& dims) const {
+void CudaTensorConsoleDumper::Print(const char*, const half*, gsl::span<const int64_t>&) const {
 }
 
-void CudaTensorConsoleDumper::Print(const char* name, const MLFloat16* tensor, gsl::span<const int64_t>& dims) const {
+void CudaTensorConsoleDumper::Print(const char*, const MLFloat16*, gsl::span<const int64_t>&) const {
 }
 
-void CudaTensorConsoleDumper::Print(const char* name, const BFloat16* tensor, gsl::span<const int64_t>& dims) const {
+void CudaTensorConsoleDumper::Print(const char*, const BFloat16*, gsl::span<const int64_t>&) const {
 }
 
 #endif
