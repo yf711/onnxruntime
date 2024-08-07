@@ -1,10 +1,5 @@
 #include "contrib_ops/cuda/bert/cudnn_fmha/cudnn_flash_attention.h"
 #include <cudnn.h>
-#include <cudnn_frontend.h>
-
-#ifndef NDEBUG
-#include <iostream>
-#endif
 
 #if CUDNN_MAJOR < 9
 namespace onnxruntime::cudnn_sdpa {
@@ -115,14 +110,15 @@ bool is_supported(const cudaDeviceProp& dprops,
                   bool is_causal) {
   bool is_sm8x = dprops.major == 8 && dprops.minor >= 0;
   bool is_sm90 = dprops.major == 9 && dprops.minor == 0;
-  // See https://github.com/NVIDIA/cudnn-frontend/blob/1.0/release/docs/operations/Attention.md
   int max_head_size = get_max_head_size();
   return (is_sm8x || is_sm90) &&
          (head_size_qk % 8 == 0) && (head_size_qk <= max_head_size) &&
          (head_size_v % 8 == 0) && (head_size_v <= max_head_size) &&
          (num_heads_q % num_heads_kv == 0) &&
-         // Bottom right causal mask is only supported with s_q multiple of 64 and s_kv multiple of 64
-         (!is_causal || (sequence_length_q % 64 == 0 && sequence_length_kv % 64 == 0));
+         // Bottom right causal mask is only supported with s_q multiple of 64 and s_kv multiple of 64.
+         (!is_causal || (sequence_length_q != sequence_length_kv &&
+                         sequence_length_q % 64 == 0 &&
+                         sequence_length_kv % 64 == 0));
 }
 
 // A helper function to set stride for q, k, v or output tensor.
@@ -245,7 +241,7 @@ std::shared_ptr<fe::graph::Graph> build_graph(GraphParams& params) {
                         .set_name("SDPA")
                         .set_is_inference(true)
                         .set_causal_mask(is_causal)
-                        .set_causal_mask_bottom_right(is_causal)
+                        .set_causal_mask_bottom_right(is_causal && sequence_length_q != sequence_length_kv)
                         .set_attn_scale(scale);
 
   if (params.sliding_window > 0) {
@@ -300,11 +296,9 @@ std::shared_ptr<fe::graph::Graph> build_graph(GraphParams& params) {
       .set_stride(stride)
       .set_uid(O_UID);
 
-#ifndef NDEBUG
-  std::cout << "cudnn graph:" << *mha_graph;
-#endif
-
-  CUDNN_FE_CALL_THROW(mha_graph->build(handle, {fe::HeurMode_t::A}));
+  if (!mha_graph->build(handle, {fe::HeurMode_t::A}).is_good()) {
+    ORT_THROW("Failed to build cuDNN graph for Flash Attention:", *mha_graph, "cudnn verison:", cudnnGetVersion());
+  }
 
   return mha_graph;
 }
@@ -379,8 +373,8 @@ void run(
   params.qkv_format = qkv_format;
   params.handle = handle;
   params.has_bias = attn_bias != nullptr;
-  params.broadcast_bias_dim_0 = bias_shape[0] == 1;
-  params.broadcast_bias_dim_1 = bias_shape[1] == 1;
+  params.broadcast_bias_dim_0 = bias_shape.size() > 0 && bias_shape[0] == 1;
+  params.broadcast_bias_dim_1 = bias_shape.size() > 1 && bias_shape[1] == 1;
   params.has_padding_mask_q = (mask_sequence_lengths_q != nullptr);
   params.has_padding_mask_kv = (mask_sequence_lengths_kv != nullptr);
   params.sliding_window = sliding_window;

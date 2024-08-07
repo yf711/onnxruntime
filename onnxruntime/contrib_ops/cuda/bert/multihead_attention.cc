@@ -274,7 +274,7 @@ Status MultiHeadAttention<T>::ComputeInternal(OpKernelContext* context) const {
       !disable_memory_efficient_attention_ &&
       is_long_sequence &&
       (relative_position_bias == nullptr || is_good_for_rpb) &&
-      is_mask_none_or_1d_k_len &&
+      (nullptr == key_padding_mask || parameters.mask_type == AttentionMaskType::MASK_1D_KEY_SEQ_LEN_START) &&
       has_memory_efficient_attention(sm, std::is_same<T, MLFloat16>::value,
                                      parameters.head_size, parameters.v_head_size);
   if (use_memory_efficient_attention) {
