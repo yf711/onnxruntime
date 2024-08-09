@@ -100,9 +100,8 @@ def attention_reference(
     assert key.dim() == 4
     assert value.dim() == 4
 
-    torch.set_printoptions(precision=6, linewidth=200, sci_mode=False)
-
     if verbose:
+        torch.set_printoptions(precision=6, linewidth=200, sci_mode=False)
         print("query(ref)", query)
         print("key(ref)", key)
         print("value(ref)", value)
@@ -123,6 +122,11 @@ def attention_reference(
         attn = attn.masked_fill((1 - mask.int()).bool(), float("-inf"))
         if verbose:
             print("masked QK(ref)", attn)
+
+    if mask is not None:
+        attn = attn.masked_fill((1 - mask.int()).bool(), float("-inf"))
+        if verbose:
+            print("masked QK(SDPA)", attn)
 
     attn = attn.softmax(-1)
     if verbose:
@@ -500,6 +504,26 @@ def parity_check_mha(
         out_ref = attention_reference(config.head_size, q, k, v, scale=config.scale, attn_bias=attn_bias, mask=mask)
 
     # Fill zeros for the padded tokens for comparison.
+    if config.mask_index_q is not None:
+        for i, m in enumerate(config.mask_index_q):
+            out[i, m:, :, :] = 0
+            out_ref[i, m:, :, :] = 0
+
+    if config.mask_index_kv is not None and config.use_kv_cache:
+        assert k_cache is not None
+        assert v_cache is not None
+        present_key = ort_outputs["present_key"]
+        present_value = ort_outputs["present_value"]
+        for i, n in enumerate(config.mask_index_kv):
+            k_cache[i, :, n:, :] = 0
+            present_key[i, :, n:, :] = 0
+            v_cache[i, :, n:, :] = 0
+            present_value[i, :, n:, :] = 0
+
+    # Restore the input format so that it shows up in the error message correctly.
+    config.input_format = ort_input_format
+
+    # Fill zeros for the padded kens for comparison.
     if config.mask_index_q is not None:
         for i, m in enumerate(config.mask_index_q):
             out[i, m:, :, :] = 0

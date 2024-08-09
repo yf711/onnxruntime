@@ -171,6 +171,19 @@ class MultiHeadAttentionConfig:
             torch.ones(self.batch_size, dtype=torch.int32, device=self.device) * self.total_sequence_length
         )
 
+        assert mask_format in [
+            AttentionMaskFormat.Mask_None,
+            AttentionMaskFormat.Mask_1D_Key_SeqLen,
+            AttentionMaskFormat.Mask_2D_Key_PaddingMask,
+        ]
+        self.mask_format = mask_format
+
+        # mask_index_q and mask_index_kv will be updated in random_inputs() if mask_format is not Mask_None.
+        self.mask_index_kv = torch.ones(self.batch_size, dtype=torch.int32, device=self.device) * self.sequence_length
+        self.mask_index_q = (
+            torch.ones(self.batch_size, dtype=torch.int32, device=self.device) * self.total_sequence_length
+        )
+
     def __repr__(self):
         return (
             f"MultiHeadAttentionConfig(batch_size={self.batch_size}, sequence_length={self.sequence_length}, "
