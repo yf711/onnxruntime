@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 #include "contrib_ops/cuda/bert/cudnn_fmha/cudnn_flash_attention.h"
 #include <cudnn.h>
 
@@ -34,7 +37,8 @@ void run(
     float /*scale*/,
     bool /*is_causal*/,
     bool /*is_bf16*/,
-    void* /*attention_bias*/,
+    void* /*bias*/,
+    gsl::span<const int64_t> /*bias_shape*/,
     int* /*mask_sequence_lengths_q*/,
     int* /*mask_sequence_lengths_kv*/,
     int /*sliding_window*/,
@@ -77,29 +81,13 @@ bool is_stable() {
   // For more information, please refer to cuDNN release notes, and the following links:
   //    https://docs.nvidia.com/deeplearning/cudnn/latest/developer/graph-api.html#fused-flash-attention-fprop
   //    https://github.com/NVIDIA/cudnn-frontend/blob/v1.5.2/docs/operations/Attention.md
-  // For cuDNN version < 9.3, we will disable it by default, unless user explicitly enables it.
+
+  // For cuDNN version < 9.3, we will disable it by default.
   return cudnnGetVersion() >= 90300;
 }
 
 namespace fe = cudnn_frontend;
 
-int get_max_head_size() {
-  static int max_head_size = 0;
-  static std::once_flag flag;
-
-  if (max_head_size == 0) {
-    std::call_once(flag, []() {
-      auto version = cudnnGetVersion();
-      if (version < 90100) {
-        max_head_size = 128;
-      } else {
-        max_head_size = 256;
-      }
-    });
-  }
-
-  return max_head_size;
-}
 bool is_supported(const cudaDeviceProp& dprops,
                   int num_heads_q,
                   int num_heads_kv,
@@ -110,10 +98,9 @@ bool is_supported(const cudaDeviceProp& dprops,
                   bool is_causal) {
   bool is_sm8x = dprops.major == 8 && dprops.minor >= 0;
   bool is_sm90 = dprops.major == 9 && dprops.minor == 0;
-  int max_head_size = get_max_head_size();
   return (is_sm8x || is_sm90) &&
-         (head_size_qk % 8 == 0) && (head_size_qk <= max_head_size) &&
-         (head_size_v % 8 == 0) && (head_size_v <= max_head_size) &&
+         (head_size_qk % 8 == 0) && (head_size_qk <= 256) &&
+         (head_size_v % 8 == 0) && (head_size_v <= 256) &&
          (num_heads_q % num_heads_kv == 0) &&
          // Bottom right causal mask is only supported with s_q multiple of 64 and s_kv multiple of 64.
          (!is_causal || (sequence_length_q != sequence_length_kv &&

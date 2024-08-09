@@ -499,7 +499,7 @@ def parity_check_mha(
     else:
         out_ref = attention_reference(config.head_size, q, k, v, scale=config.scale, attn_bias=attn_bias, mask=mask)
 
-    # Fill zeros for the padded kens for comparison.
+    # Fill zeros for the padded tokens for comparison.
     if config.mask_index_q is not None:
         for i, m in enumerate(config.mask_index_q):
             out[i, m:, :, :] = 0
@@ -643,7 +643,7 @@ def parity_check_mha_multi_threading(
         else:
             out_ref = attention_reference(config.head_size, q, k, v, scale=config.scale, attn_bias=attn_bias, mask=mask)
 
-        # Fill zeros for the padded kens for comparison.
+        # Fill zeros for the padded tokens for comparison.
         if config.mask_index_q is not None:
             for i, m in enumerate(config.mask_index_q):
                 out[i, m:, :, :] = 0
