@@ -332,6 +332,8 @@ Status EfficientAttention(
   // Otherwise, key have effective batch size 2 * batch_size, which is different from batch_size of query.
   assert(data.qkv_format == AttentionQkvFormat::Q_K_V_BSNH ||
          data.qkv_format == AttentionQkvFormat::Q_K_V_BSNH_BNSH_BNSH);
+  assert(parameters.mask_type == AttentionMaskType::MASK_NONE ||
+         parameters.mask_type == AttentionMaskType::MASK_1D_KEY_SEQ_LEN_START);
 
   MemoryEfficientAttentionParams p;
   p.sm = device_prop.major * 10 + device_prop.minor;
@@ -345,17 +347,17 @@ Status EfficientAttention(
   p.v_head_size = parameters.v_head_size;
   p.causal = parameters.is_unidirectional;
   p.scale = scale;
-  p.seqlen_k_ptr = nullptr == data.mask_index
-                       ? nullptr
-                       : const_cast<int32_t*>(reinterpret_cast<const int32_t*>(data.mask_index));
-  p.seqstart_q_ptr = nullptr == data.mask_index
-                         ? nullptr
-                         : const_cast<int32_t*>(reinterpret_cast<const int32_t*>(
-                               data.mask_index + parameters.batch_size));
-  p.seqstart_k_ptr = nullptr == data.mask_index
-                         ? nullptr
-                         : const_cast<int32_t*>(reinterpret_cast<const int32_t*>(
-                               data.mask_index + 2 * parameters.batch_size + 1));
+
+  if (nullptr == data.mask_index) {
+    p.seqlen_k_ptr = nullptr;
+    p.seqstart_q_ptr = nullptr;
+    p.seqstart_k_ptr = nullptr;
+  } else {
+    p.seqlen_k_ptr = const_cast<int32_t*>(reinterpret_cast<const int32_t*>(data.mask_index));
+    p.seqstart_q_ptr = const_cast<int32_t*>(reinterpret_cast<const int32_t*>(data.mask_index + parameters.batch_size));
+    p.seqstart_k_ptr = const_cast<int32_t*>(reinterpret_cast<const int32_t*>(data.mask_index + 2 * parameters.batch_size + 1));
+  }
+
   p.query = data.q;
   p.key = data.k;
   p.value = data.v;
@@ -415,6 +417,12 @@ Status UnfusedAttention(
   const int present_size_per_batch_k = present_sequence_length * qk_head_size;
   const int present_size_per_batch_v = present_sequence_length * v_head_size;
 
+  DUMP_TENSOR_INIT();
+  DUMP_TENSOR_D("q", data.q, batch_size, num_heads, sequence_length, qk_head_size);
+  DUMP_TENSOR_D("k", data.k, batch_size, num_heads, total_sequence_length, qk_head_size);
+  DUMP_TENSOR_D("v", data.v, batch_size, num_heads, total_sequence_length, v_head_size);
+  DUMP_TENSOR_D("mask_index", mask_index, mask_index_dims);
+
   CUBLAS_RETURN_IF_ERROR(cublasGemmStridedBatchedHelper(
       cublas, CUBLAS_OP_T, CUBLAS_OP_N,
       total_sequence_length, sequence_length, qk_head_size,
@@ -423,7 +431,6 @@ Status UnfusedAttention(
       &zero, data.scratch, total_sequence_length, sequence_length * total_sequence_length, batches,
       device_prop, parameters.use_tf32));
 
-  DUMP_TENSOR_INIT();
   DUMP_TENSOR_D("QK", data.scratch, batch_size, num_heads, sequence_length, total_sequence_length);
 
   constexpr size_t element_size = sizeof(T);
@@ -464,7 +471,6 @@ Status UnfusedAttention(
   }
 
   DUMP_TENSOR_D("Softmax", scratch2, batch_size, num_heads, sequence_length, total_sequence_length);
-  DUMP_TENSOR_D("V", data.v, batch_size, num_heads, sequence_length, v_head_size);
 
   // compute R*V (as V*R), and store in temp_output (space used by Q): BxNxSxH_v
   T* temp_output = data.q;

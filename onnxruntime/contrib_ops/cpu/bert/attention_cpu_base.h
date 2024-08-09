@@ -66,10 +66,13 @@ class AttentionCPUBase : public AttentionBase {
     gsl::span<const int64_t> mask_index_dims = mask_index != nullptr
                                                    ? mask_index->Shape().GetDims()
                                                    : gsl::span<const int64_t>{};
+    DUMP_CPU_TENSOR_INIT();
+    DUMP_CPU_TENSOR("Mask", mask_index_data, mask_index_dims);
+
     if (mask_data != nullptr) {
+      // Convert mask from boolean (0/1) to float (mask_filter_value/0.0f).
       PrepareMask(mask_index_data, mask_index_dims, static_cast<T*>(mask_data),
                   causal, batch_size, sequence_length, past_sequence_length, mask_filter_value_);
-      DUMP_CPU_TENSOR_INIT();
       DUMP_CPU_TENSOR("Mask3D", static_cast<T*>(mask_data), batch_size, sequence_length, total_sequence_length);
     }
 
