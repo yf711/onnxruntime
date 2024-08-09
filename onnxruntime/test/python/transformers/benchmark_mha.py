@@ -840,7 +840,11 @@ def run_tflops_test(
                 input_dict = config.random_inputs()
 
                 # warm up session
-                _ = measure_latency(session, input_dict)
+                try:
+                    _ = measure_latency(session, input_dict)
+                except Exception as e:
+                    print(f"Failed to run {kernel=} for {config=}. Exception: {e}")
+                    continue
 
                 latency_list = []
                 for _ in range(repeats):
