@@ -681,6 +681,8 @@ class DefaultWeightOnlyQuantizer:
         quant_data_int4 = DefaultWeightOnlyQuantizer.pack_int8_to_int4(quant_data_int8)
         if not is_symmetric:
             zero_point_int4 = DefaultWeightOnlyQuantizer.pack_int8_to_int4(zero_point_int8)
+        else:
+            zero_point_int4 = 0
 
         return quant_data_int4, scales, zero_point_int4
 
