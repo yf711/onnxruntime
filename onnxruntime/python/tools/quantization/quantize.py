@@ -11,11 +11,8 @@ from typing import Union
 import onnx
 
 from .calibrate import CalibrationDataReader, CalibrationMethod, TensorsData, create_calibrator
+from .matmul_4bits_quantizer import MatMul4BitsQuantizer, WeightOnlyQuantConfig
 from .onnx_quantizer import ONNXQuantizer
-from .matmul_4bits_quantizer import (
-    WeightOnlyQuantConfig,
-    MatMul4BitsQuantizer
-)
 from .qdq_quantizer import QDQQuantizer
 from .quant_utils import (
     QuantFormat,
@@ -696,7 +693,7 @@ def quantize_dynamic(
 def quantize(
     model_input: Union[str, Path, onnx.ModelProto],
     model_output: Union[str, Path],
-    quant_config: QuantConfig | WeightOnlyQuantConfig,
+    quant_config: Union[QuantConfig, WeightOnlyQuantConfig],
 ):
     """Quantize a model with QuantConfig.
 
